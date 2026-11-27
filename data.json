@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-27 23:33 UTC",
+  "updated_at": "2026-11-27 23:54 UTC",
   "spx": {
     "dates": [
       "11/06",
@@ -172,5 +172,19 @@
     ],
     "spread_2s10s": 0.24,
     "tips10": 2.73
+  },
+  "cnn": {
+    "score": 24.9,
+    "rating": "extreme fear",
+    "previous_close": 15.6
+  },
+  "s5fi": {
+    "latest": 64.67,
+    "sample_size": 501
+  },
+  "aaii": {
+    "bullish": 24.0,
+    "neutral": 24.0,
+    "bearish": 24.0
   }
 }
