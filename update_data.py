@@ -63,28 +63,22 @@ def fetch_fred_series(series_id, limit=15):
 
 
 def fetch_cnn_fear_greed():
-    """抓取 CNN 恐慌贪婪指数官方 JSON 接口"""
+    """抓取 CNN 恐慌贪婪指数，返回纯数字（如 24.9）"""
     url = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
     headers = {**HEADERS, "Referer": "https://edition.cnn.com/"}
     try:
         r = requests.get(url, headers=headers, timeout=15)
         r.raise_for_status()
-        fg = r.json().get("fear_and_greed", {})
-        score = fg.get("score")
-        rating = fg.get("rating", "")
+        score = r.json().get("fear_and_greed", {}).get("score")
         if score is not None:
-            return {
-                "score": round(float(score), 1),
-                "rating": rating,
-                "previous_close": round(float(fg.get("previous_close", score)), 1),
-            }
+            return round(float(score), 1)
     except Exception as e:
         print(f"CNN Fear & Greed fetch failed: {e}")
     return None
 
 
 def fetch_s5fi():
-    """直接抓取标普 500 成分股并计算站上 50 日均线的股票占比 ($S5FI)"""
+    """计算标普 500 站上 50 日均线的股票占比，返回纯数字（如 64.67）"""
     try:
         wiki_url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
         r = requests.get(wiki_url, headers=HEADERS, timeout=15)
@@ -109,73 +103,68 @@ def fetch_s5fi():
         valid = latest_close.notna() & latest_ma50.notna()
         if valid.sum() > 400:
             pct = (latest_close[valid] > latest_ma50[valid]).mean() * 100
-            return {
-                "latest": round(float(pct), 2),
-                "sample_size": int(valid.sum()),
-            }
+            return round(float(pct), 2)
     except Exception as e:
         print(f"S5FI calculation failed: {e}")
     return None
 
 
-def fetch_aaii():
-    """抓取 AAII 散户情绪调查（优先官方 XLS，失败则解析网页）"""
+def fetch_aaii(limit=8):
+    """抓取 AAII 周度情绪，过滤底部汇总行，返回最近 8 周折线图数组"""
     xls_url = "https://www.aaii.com/files/surveys/sentiment.xls"
     try:
         r = requests.get(xls_url, headers=HEADERS, timeout=15)
         r.raise_for_status()
         df = pd.read_excel(io.BytesIO(r.content), skiprows=3)
-        df = df.dropna(subset=[df.columns[1], df.columns[2], df.columns[3]])
-        # 取最新有效行
-        for i in range(len(df) - 1, -1, -1):
-            row = df.iloc[i]
-            try:
-                bull = float(row.iloc[1])
-                neut = float(row.iloc[2])
-                bear = float(row.iloc[3])
-                # 兼容小数(0.45)与百分比(45.0)
-                if bull <= 1.0 and bear <= 1.0:
-                    bull, neut, bear = bull * 100, neut * 100, bear * 100
-                if 0 < bull + neut + bear <= 105:
-                    return {
-                        "bullish": round(bull, 1),
-                        "neutral": round(neut, 1),
-                        "bearish": round(bear, 1),
-                    }
-            except (ValueError, TypeError):
-                continue
+        df = df.iloc[:, :4].copy()
+        df.columns = ["date", "bull", "neutral", "bear"]
+
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        for col in ["bull", "neutral", "bear"]:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        df = df.dropna(subset=["date", "bull", "neutral", "bear"])
+        df = df.sort_values("date").tail(limit)
+
+        if not df.empty:
+            # 兼容小数(0.371)与百分比(37.1)
+            scale = 100.0 if df["bull"].max() <= 1.0 else 1.0
+            return {
+                "dates": df["date"].dt.strftime("%m/%d").tolist(),
+                "bull": [round(float(x) * scale, 1) for x in df["bull"].tolist()],
+                "bear": [round(float(x) * scale, 1) for x in df["bear"].tolist()],
+                "neutral": [round(float(x) * scale, 1) for x in df["neutral"].tolist()],
+            }
     except Exception as e:
         print(f"AAII XLS fetch failed: {e}")
     return None
 
 
 def fetch_naaim():
-    """抓取 NAAIM 机构股票仓位指数"""
+    """抓取 NAAIM 机构股票仓位，返回纯数字"""
     url = "https://www.naaim.org/programs/naaim-exposure-index/"
     try:
         r = requests.get(url, headers=HEADERS, timeout=15)
         r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
-        # 查找页面中的最新表格数值
         tables = pd.read_html(io.StringIO(r.text))
         for tbl in tables:
             for col in tbl.columns:
                 if "naaim" in str(col).lower() or "number" in str(col).lower():
                     val = pd.to_numeric(tbl[col], errors="coerce").dropna()
                     if not val.empty:
-                        return {"latest": round(float(val.iloc[0]), 2)}
-        # 兜底：正则匹配页面中的最新读数
+                        return round(float(val.iloc[0]), 2)
+        soup = BeautifulSoup(r.text, "lxml")
         text = soup.get_text(" ", strip=True)
         m = re.search(r"NAAIM Exposure Index.*?(\d{1,3}\.\d{1,2})", text)
         if m:
-            return {"latest": round(float(m.group(1)), 2)}
+            return round(float(m.group(1)), 2)
     except Exception as e:
         print(f"NAAIM fetch failed: {e}")
     return None
 
 
 def fetch_put_call():
-    """抓取 CBOE 全市场 Put/Call 比率（备用 YCharts 公开页面）"""
+    """抓取 CBOE Put/Call 比率，返回纯数字"""
     url = "https://ycharts.com/indicators/cboe_equity_put_call_ratio"
     try:
         r = requests.get(url, headers=HEADERS, timeout=15)
@@ -184,7 +173,7 @@ def fetch_put_call():
         text = soup.get_text(" ", strip=True)
         m = re.search(r"(\d\.\d{2})\s+for\s+[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}", text)
         if m:
-            return {"latest": round(float(m.group(1)), 2)}
+            return round(float(m.group(1)), 2)
     except Exception as e:
         print(f"Put/Call fetch failed: {e}")
     return None
@@ -192,6 +181,13 @@ def fetch_put_call():
 
 def main():
     data = load_existing()
+    # 清理旧版错误格式，防止残留导致前端报错
+    for k in ["cnn", "s5fi", "naaim", "put_call"]:
+        if isinstance(data.get(k), dict):
+            data.pop(k, None)
+    if isinstance(data.get("aaii"), dict) and "bull" not in data["aaii"]:
+        data.pop("aaii", None)
+
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     data["updated_at"] = now_str
 
@@ -256,29 +252,29 @@ def main():
             "tips10": round(tips10[-1][1], 2) if tips10 else None,
         }
 
-    # 5. 新增：CNN 恐慌贪婪指数
+    # 5. CNN 恐慌贪婪指数（纯数字）
     cnn = fetch_cnn_fear_greed()
-    if cnn:
+    if cnn is not None:
         data["cnn"] = cnn
 
-    # 6. 新增：标普 500 站上 50 日线占比 ($S5FI)
+    # 6. 标普 500 站上 50 日线占比（纯数字）
     s5fi = fetch_s5fi()
-    if s5fi:
+    if s5fi is not None:
         data["s5fi"] = s5fi
 
-    # 7. 新增：AAII 散户看多/看空比
-    aaii = fetch_aaii()
-    if aaii:
+    # 7. AAII 散户情绪（8 周数组）
+    aaii = fetch_aaii(limit=8)
+    if aaii is not None:
         data["aaii"] = aaii
 
-    # 8. 新增：NAAIM 机构仓位
+    # 8. NAAIM 机构仓位（纯数字）
     naaim = fetch_naaim()
-    if naaim:
+    if naaim is not None:
         data["naaim"] = naaim
 
-    # 9. 新增：CBOE Put/Call 比率
+    # 9. CBOE Put/Call 比率（纯数字）
     put_call = fetch_put_call()
-    if put_call:
+    if put_call is not None:
         data["put_call"] = put_call
 
     with open(DATA_FILE, "w", encoding="utf-8") as f:
