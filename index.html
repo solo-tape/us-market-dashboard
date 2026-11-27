@@ -7,26 +7,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
   <style>
-    body {
-      background-color: #090d16;
-      color: #e2e8f0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-    }
-    .card {
-      background: linear-gradient(180deg, #111827 0%, #0d1321 100%);
-      border: 1px solid #1e293b;
-      border-radius: 0.75rem;
-    }
-    .sub-card {
-      background-color: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(51, 65, 85, 0.65);
-      border-radius: 0.5rem;
-    }
+    body { background-color: #090d16; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .card { background: linear-gradient(180deg, #111827 0%, #0d1321 100%); border: 1px solid #1e293b; border-radius: 0.75rem; }
+    .sub-card { background-color: rgba(15, 23, 42, 0.75); border: 1px solid rgba(51, 65, 85, 0.65); border-radius: 0.5rem; }
   </style>
 </head>
 <body class="min-h-screen antialiased pb-12">
 
-  <!-- 顶部导航栏 -->
   <header class="border-b border-slate-800/80 bg-[#0b101b]/90 sticky top-0 z-30 backdrop-blur">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
@@ -37,84 +24,62 @@
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <span id="data-status" class="text-xs px-2.5 py-1 rounded-md bg-slate-800/90 border border-slate-700 text-slate-300">
-          数据基准：2026-11-25 收盘
-        </span>
-        <button id="refresh-btn" onclick="loadMarketData(true)" class="text-xs px-3 py-1.5 rounded-md bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 transition flex items-center gap-1.5">
-          <span>刷新数据</span>
-        </button>
+        <span id="data-status" class="text-xs px-2.5 py-1 rounded-md bg-slate-800/90 border border-slate-700 text-slate-300">数据基准：2026-11-25 收盘</span>
+        <button onclick="loadMarketData(true)" class="text-xs px-3 py-1.5 rounded-md bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 transition">刷新数据</button>
       </div>
     </div>
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
 
-    <!-- 第一层：顶部 3 列等宽结论区（10 秒极简视图） -->
+    <!-- 第一层：顶部 3 列结论区 -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="card p-5 flex flex-col justify-between border-t-2 border-t-amber-400">
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-medium tracking-wider text-slate-400 uppercase">01 · 超买 / 超卖</span>
-            <span class="text-[11px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">技术水位</span>
-          </div>
-          <div id="verdict-overbought" class="text-2xl font-bold text-amber-400 mb-2">短线偏超卖</div>
-          <p id="verdict-overbought-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed">
-            标普 500（7,182.78）位于 50/200 日线下方，但全市场站上 50 日线占比仍达 55.06%，说明下跌主要集中在科技权重股，非全面崩盘。
-          </p>
+      <div class="card p-5 border-t-2 border-t-amber-400">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium tracking-wider text-slate-400">01 · 超买 / 超卖</span>
+          <span class="text-[11px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">技术水位</span>
         </div>
+        <div class="text-2xl font-bold text-amber-400 mb-2">短线偏超卖</div>
+        <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed">标普 500（7,182.78）位于 50/200 日线下方，但全市场站上 50 日线占比仍达 55.06%，说明下跌主要集中在科技权重股，非全面崩盘。</p>
       </div>
-
-      <div class="card p-5 flex flex-col justify-between border-t-2 border-t-rose-500">
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-medium tracking-wider text-slate-400 uppercase">02 · 市场情绪</span>
-            <span class="text-[11px] px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">逆向温度</span>
-          </div>
-          <div id="verdict-sentiment" class="text-2xl font-bold text-rose-400 mb-2">极度悲观</div>
-          <p id="verdict-sentiment-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed">
-            CNN 恐慌贪婪指数跌至 15（极度恐慌），AAII 散户看空比例升至 45.4%，NAAIM 机构仓位砍至 51.2，恐慌情绪已接近阶段性冰点。
-          </p>
+      <div class="card p-5 border-t-2 border-t-rose-500">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium tracking-wider text-slate-400">02 · 市场情绪</span>
+          <span class="text-[11px] px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">逆向温度</span>
         </div>
+        <div class="text-2xl font-bold text-rose-400 mb-2">极度悲观</div>
+        <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed">CNN 恐慌贪婪指数跌至 15（极度恐慌），AAII 散户看空比例升至 45.4%，NAAIM 机构仓位砍至 51.2，恐慌情绪已接近阶段性冰点。</p>
       </div>
-
-      <div class="card p-5 flex flex-col justify-between border-t-2 border-t-emerald-400">
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-medium tracking-wider text-slate-400 uppercase">03 · 个人动作建议</span>
-            <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">信用未否决</span>
-          </div>
-          <div id="verdict-action" class="text-2xl font-bold text-emerald-400 mb-2">持有 / 左侧观察买回</div>
-          <p id="verdict-action-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed">
-            高收益债利差（3.72%）远低于 5.0% 熊市线，当前非减仓区；但 12/9 加息 25bp 定价达 99.4%，建议拿稳底仓、左侧分批观察，勿盲目追高。
-          </p>
+      <div class="card p-5 border-t-2 border-t-emerald-400">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium tracking-wider text-slate-400">03 · 个人动作建议</span>
+          <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">信用未否决</span>
         </div>
+        <div class="text-2xl font-bold text-emerald-400 mb-2">持有 / 左侧观察买回</div>
+        <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed">高收益债利差（3.72%）远低于 5.0% 熊市线，当前非减仓区；但 12/9 加息 25bp 定价达 99.4%，建议拿稳底仓、左侧分批观察，勿盲目追高。</p>
       </div>
     </section>
 
-    <!-- 第二层：3 列等宽核心图表区 -->
+    <!-- 第二层：3 列核心图表区 -->
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-      <!-- 核心图 1：趋势水位 -->
       <div class="card p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold text-white">趋势水位 · 标普 500 (SPX)</h2>
             <span id="spx-badge" class="text-xs font-mono font-semibold text-amber-300">7,182.78</span>
           </div>
-          <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
-            对比 50/200 日均线判断多空区间，结合市场广度识别真假下跌。
-          </p>
+          <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">对比 50/200 日均线判断多空区间，结合市场广度识别真假下跌。</p>
           <div id="chart-spx" class="w-full h-52 mt-2"></div>
         </div>
         <div class="sub-card p-3 mt-3 min-h-[76px] flex flex-col justify-center">
           <div class="flex items-center justify-between text-xs mb-1.5">
             <span class="text-slate-300 font-medium">标普 500 站上 50 日线占比 ($S5FI)</span>
-            <span id="s5fi-val" class="font-mono font-bold text-sky-400">55.06%</span>
+            <span class="font-mono font-bold text-sky-400">55.06%</span>
           </div>
           <div class="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-            <div id="s5fi-bar" class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-rose-400 rounded-full" style="width: 55.06%"></div>
-            <div class="absolute top-0 bottom-0 left-[20%] w-0.5 bg-emerald-300/90" title="20% 短线超卖"></div>
-            <div class="absolute top-0 bottom-0 left-[85%] w-0.5 bg-rose-400/90" title="85% 短线过热"></div>
+            <div class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-rose-400 rounded-full" style="width: 55.06%"></div>
+            <div class="absolute top-0 bottom-0 left-[20%] w-0.5 bg-emerald-300/90"></div>
+            <div class="absolute top-0 bottom-0 left-[85%] w-0.5 bg-rose-400/90"></div>
           </div>
           <div class="flex justify-between text-[11px] text-slate-400 mt-1">
             <span class="text-emerald-400">&lt;20% 短线超卖</span>
@@ -124,16 +89,13 @@
         </div>
       </div>
 
-      <!-- 核心图 2：情绪温度计 -->
       <div class="card p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold text-white">情绪温度计 · CNN 恐慌贪婪</h2>
-            <span id="cnn-badge" class="text-xs font-mono font-semibold text-rose-400">15 · 极度恐慌</span>
+            <span class="text-xs font-mono font-semibold text-rose-400">15 · 极度恐慌</span>
           </div>
-          <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
-            衡量市场情绪极端值；别人最恐慌时找买点，最狂热时分批减仓。
-          </p>
+          <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">衡量市场情绪极端值；别人最恐慌时找买点，最狂热时分批减仓。</p>
           <div id="chart-cnn" class="w-full h-52 mt-2"></div>
         </div>
         <div class="sub-card p-3 mt-3 min-h-[76px] grid grid-cols-2 gap-2 items-center">
@@ -148,16 +110,13 @@
         </div>
       </div>
 
-      <!-- 核心图 3：信用防雷针 -->
       <div class="card p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold text-white">信用防雷针 · 高收益债利差 (HY OAS)</h2>
             <span id="hy-badge" class="text-xs font-mono font-semibold text-emerald-400">3.72% · 安全</span>
           </div>
-          <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
-            区分情绪回调与真熊市的红线：未破 5.0% 说明大资金未定价系统性危机。
-          </p>
+          <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">区分情绪回调与真熊市的红线：未破 5.0% 说明大资金未定价系统性危机。</p>
           <div id="chart-hy" class="w-full h-52 mt-2"></div>
         </div>
         <div class="sub-card p-3 mt-3 min-h-[76px] grid grid-cols-2 gap-2 items-center">
@@ -171,66 +130,62 @@
           </div>
         </div>
       </div>
-
     </section>
 
-    <!-- 第三层：深度验证面板（2×2 机构视角） -->
+    <!-- 第三层：深度验证面板（2×2） -->
     <section class="space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
         <div class="flex items-center gap-2">
           <span class="w-1.5 h-4 bg-sky-400 rounded-full"></span>
           <h2 class="text-sm font-semibold text-slate-200 tracking-wide">深度验证指标（2×2 机构视角）</h2>
         </div>
-        <button id="toggle-deep-btn" onclick="toggleDeepSection()" class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700 transition">
-          收起面板
-        </button>
+        <button id="toggle-deep-btn" onclick="toggleDeepSection()" class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700 transition">收起面板</button>
       </div>
 
       <div id="deep-section" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        <!-- 左上：AAII 散户情绪 -->
+        <!-- 左上：AAII -->
         <div class="card p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-semibold text-white">AAII 散户情绪（周度逆向指标）</h3>
-              <span class="text-xs font-mono text-slate-300">
-                <span class="text-rose-400">多 37.1%</span> / <span class="text-emerald-400">空 45.4%</span>
-              </span>
+              <span class="text-xs font-mono"><span class="text-rose-400">多 37.1%</span> / <span class="text-emerald-400">空 45.4%</span></span>
             </div>
-            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
-              红线看多、绿线看空。看空 &gt; 45% 或看多 &lt; 25% 时，往往暗示散户割肉接近尾声。
-            </p>
-            <div id="chart-aaii" class="w-full h-48 mt-2"></div>
+            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">红线看多、绿线看空。看空 &gt; 45% 或看多 &lt; 25% 时，往往暗示散户割肉接近尾声。</p>
+            <div id="chart-aaii" class="w-full h-44 mt-2"></div>
+          </div>
+          <div class="sub-card p-2.5 mt-3 grid grid-cols-2 gap-2 items-center">
+            <div class="border-r border-slate-700/70 pr-2 flex items-center gap-2">
+              <span class="w-4 border-t-2 border-dashed border-emerald-400 inline-block shrink-0"></span>
+              <span class="text-xs text-emerald-400">绿虚线 45%：看空 &gt;45% 恐慌抄底区</span>
+            </div>
+            <div class="pl-1 flex items-center gap-2">
+              <span class="w-4 border-t-2 border-dashed border-rose-500 inline-block shrink-0"></span>
+              <span class="text-xs text-rose-400">红虚线 25%：看多 &lt;25% 极端悲观</span>
+            </div>
           </div>
         </div>
 
-        <!-- 右上：CBOE VIX 期限结构 -->
+        <!-- 右上：VIX -->
         <div class="card p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between flex-wrap gap-2">
               <h3 class="text-sm font-semibold text-white">CBOE VIX 波动率期限结构</h3>
-              <span id="vix-ratio-badge" class="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                VIX / VIX3M = 1.03 · 轻度倒挂
-              </span>
+              <span id="vix-ratio-badge" class="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">VIX / VIX3M = 1.03 · 轻度倒挂</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
-              比值 &gt; 1.0 为倒挂（近端恐慌高于远端，属急性踩踏）；&lt; 1.0 为正常正挂结构。
-            </p>
-            <div id="chart-vix" class="w-full h-48 mt-2"></div>
+            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">比值 &gt; 1.0 为倒挂（近端恐慌高于远端，属急性踩踏）；&lt; 1.0 为正常正挂结构。</p>
+            <div id="chart-vix" class="w-full h-52 mt-2"></div>
           </div>
         </div>
 
-        <!-- 左下：2Y vs 10Y 美债利率与美联储路径 -->
+        <!-- 左下：2Y vs 10Y 美债 -->
         <div class="card p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-semibold text-white">利率与美联储路径 · 2Y vs 10Y 美债</h3>
               <span id="rates-badge" class="text-xs font-mono text-sky-300">10Y 4.85% · 2Y 4.61%</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
-              10 年期决定成长股估值锚，2 年期反映加息预期；实际利率回落利好科技股。
-            </p>
-            <div id="chart-rates" class="w-full h-44 mt-2"></div>
+            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">10 年期决定成长股估值锚，2 年期反映加息预期；实际利率回落利好科技股。</p>
+            <div id="chart-rates" class="w-full h-48 mt-2"></div>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-3">
             <div class="sub-card p-2.5">
@@ -251,17 +206,15 @@
           </div>
         </div>
 
-        <!-- 右下：费城半导体 SOX 与机构仓位 -->
+        <!-- 右下：SOX -->
         <div class="card p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-semibold text-white">半导体主线 (SOX) 与机构/期权验证</h3>
               <span id="sox-badge" class="text-xs font-mono text-amber-300">8,777.40</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
-              SOX/SPX 衡量半导体相对强弱；NAAIM 看机构真金白银仓位，Put/Call 看期权避险度。
-            </p>
-            <div id="chart-sox" class="w-full h-44 mt-2"></div>
+            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">SOX/SPX 衡量半导体相对强弱；NAAIM 看机构真金白银仓位，Put/Call 看期权避险度。</p>
+            <div id="chart-sox" class="w-full h-48 mt-2"></div>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-3">
             <div class="sub-card p-2.5">
@@ -281,78 +234,36 @@
             </div>
           </div>
         </div>
-
       </div>
     </section>
-
   </main>
 
   <script>
     const FALLBACK_DATA = {
       updated_at: "2026-11-25 收盘快照",
-      spx: {
-        dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"],
-        close: [7540, 7495, 7420, 7365, 7280, 7115, 7145, 7120, 7182.78],
-        ma50: 7602,
-        ma200: 7350,
-        latest: 7182.78
-      },
-      s5fi: 55.06,
+      spx: { dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"], close: [7540,7495,7420,7365,7280,7115,7145,7120,7182.78], ma50: 7602, ma200: 7350, latest: 7182.78 },
       cnn: 15,
-      hy_oas: {
-        dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"],
-        values: [3.28, 3.31, 3.38, 3.45, 3.52, 3.68, 3.74, 3.75, 3.72],
-        latest: 3.72
-      },
-      aaii: {
-        dates: ["11/05", "11/12", "11/19", "11/25"],
-        bull: [41.2, 38.5, 34.8, 37.1],
-        bear: [42.1, 43.8, 46.9, 45.4],
-        neutral: [16.7, 17.7, 18.3, 17.5]
-      },
-      vix_term: {
-        VIX1D: 24.8,
-        VIX9D: 28.4,
-        VIX: 27.6,
-        VIX3M: 26.8,
-        ratio: 1.03
-      },
-      rates: {
-        dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"],
-        y10: [5.15, 5.12, 5.08, 5.04, 4.99, 4.94, 4.91, 4.88, 4.85],
-        y2:  [4.88, 4.86, 4.82, 4.78, 4.74, 4.70, 4.67, 4.64, 4.61],
-        spread_2s10s: 0.24,
-        tips10: 2.38
-      },
-      sox: {
-        dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"],
-        close: [9620, 9480, 9310, 9150, 8920, 8640, 8690, 8685, 8777.4],
-        latest: 8777.4,
-        sox_spx_ratio: 1.222
-      }
+      hy_oas: { dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"], values: [3.28,3.31,3.38,3.45,3.52,3.68,3.74,3.75,3.72], latest: 3.72 },
+      aaii: { dates: ["11/05","11/12","11/19","11/25"], bull: [41.2,38.5,34.8,37.1], bear: [42.1,43.8,46.9,45.4], neutral: [16.7,17.7,18.3,17.5] },
+      vix_term: { VIX1D: 24.8, VIX9D: 28.4, VIX: 27.6, VIX3M: 26.8, ratio: 1.03 },
+      rates: { dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"], y10: [5.15,5.12,5.08,5.04,4.99,4.94,4.91,4.88,4.85], y2: [4.88,4.86,4.82,4.78,4.74,4.70,4.67,4.64,4.61], spread_2s10s: 0.24, tips10: 2.38 },
+      sox: { dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"], close: [9620,9480,9310,9150,8920,8640,8690,8685,8777.4], latest: 8777.4, sox_spx_ratio: 1.222 }
     };
 
     const charts = {};
-
-    function initChart(id) {
-      if (!charts[id]) {
-        charts[id] = echarts.init(document.getElementById(id));
-      }
-      return charts[id];
-    }
+    const initChart = (id) => charts[id] || (charts[id] = echarts.init(document.getElementById(id)));
+    const tip = { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } };
 
     function renderAll(d) {
       document.getElementById("data-status").textContent = "数据更新：" + (d.updated_at || "2026-11-25");
       if (d.spx) document.getElementById("spx-badge").textContent = d.spx.latest.toLocaleString();
       if (d.hy_oas) {
-        const hy = d.hy_oas.latest;
-        const el = document.getElementById("hy-badge");
+        const hy = d.hy_oas.latest, el = document.getElementById("hy-badge");
         el.textContent = hy.toFixed(2) + "% · " + (hy >= 5.0 ? "熊市警戒" : "安全");
         el.className = "text-xs font-mono font-semibold " + (hy >= 5.0 ? "text-rose-400" : "text-emerald-400");
       }
       if (d.rates) {
-        const y10 = d.rates.y10[d.rates.y10.length - 1];
-        const y2 = d.rates.y2[d.rates.y2.length - 1];
+        const y10 = d.rates.y10[d.rates.y10.length - 1], y2 = d.rates.y2[d.rates.y2.length - 1];
         document.getElementById("rates-badge").textContent = `10Y ${y10.toFixed(2)}% · 2Y ${y2.toFixed(2)}%`;
         document.getElementById("spread-2s10s").textContent = (d.rates.spread_2s10s >= 0 ? "+" : "") + d.rates.spread_2s10s.toFixed(2) + "%";
         if (d.rates.tips10) document.getElementById("tips-10y").textContent = d.rates.tips10.toFixed(2) + "%";
@@ -363,212 +274,109 @@
       }
       if (d.vix_term && d.vix_term.ratio) {
         const r = d.vix_term.ratio;
-        const el = document.getElementById("vix-ratio-badge");
-        el.textContent = `VIX / VIX3M = ${r.toFixed(2)} · ${r > 1 ? "倒挂(急性恐慌)" : "正挂(正常)"}`;
+        document.getElementById("vix-ratio-badge").textContent = `VIX / VIX3M = ${r.toFixed(2)} · ${r > 1 ? "倒挂(急性恐慌)" : "正挂(正常)"}`;
       }
 
-      // 1. SPX 趋势水位图（每个节点标整数值）
       initChart("chart-spx").setOption({
-        backgroundColor: "transparent",
-        tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
-        grid: { left: 46, right: 20, top: 26, bottom: 24 },
+        backgroundColor: "transparent", tooltip: tip, grid: { left: 46, right: 20, top: 26, bottom: 24 },
         xAxis: { type: "category", data: d.spx.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         series: [{
-          name: "SPX",
-          type: "line",
-          smooth: true,
-          symbolSize: 6,
-          data: d.spx.close,
-          lineStyle: { color: "#38bdf8", width: 2.5 },
-          itemStyle: { color: "#38bdf8" },
+          name: "SPX", type: "line", smooth: true, symbolSize: 6, data: d.spx.close,
+          lineStyle: { color: "#38bdf8", width: 2.5 }, itemStyle: { color: "#38bdf8" },
           label: { show: true, position: "top", color: "#bae6fd", fontSize: 10, formatter: (p) => Math.round(p.value) },
           areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "rgba(56,189,248,0.22)" }, { offset: 1, color: "rgba(56,189,248,0)" }]) },
-          markLine: {
-            symbol: "none",
-            label: { fontSize: 10, position: "insideEndTop" },
-            data: [
-              d.spx.ma50 ? { yAxis: d.spx.ma50, name: "50MA", lineStyle: { color: "#f59e0b", type: "dashed" }, label: { color: "#fbbf24", formatter: "50MA: {c}" } } : null,
-              d.spx.ma200 ? { yAxis: d.spx.ma200, name: "200MA", lineStyle: { color: "#f43f5e", type: "dashed" }, label: { color: "#fb7185", formatter: "200MA: {c}" } } : null
-            ].filter(Boolean)
-          }
+          markLine: { symbol: "none", label: { fontSize: 10, position: "insideEndTop" }, data: [
+            d.spx.ma50 ? { yAxis: d.spx.ma50, lineStyle: { color: "#f59e0b", type: "dashed" }, label: { color: "#fbbf24", formatter: "50MA: {c}" } } : null,
+            d.spx.ma200 ? { yAxis: d.spx.ma200, lineStyle: { color: "#f43f5e", type: "dashed" }, label: { color: "#fb7185", formatter: "200MA: {c}" } } : null
+          ].filter(Boolean) }
         }]
       });
 
-      // 2. CNN 情绪仪表盘
       const cnnVal = d.cnn ?? 15;
       initChart("chart-cnn").setOption({
         backgroundColor: "transparent",
         series: [{
-          type: "gauge",
-          startAngle: 180,
-          endAngle: 0,
-          min: 0,
-          max: 100,
-          splitNumber: 4,
-          center: ["50%", "74%"],
-          radius: "96%",
-          axisLine: {
-            lineStyle: {
-              width: 15,
-              color: [[0.25, "#ef4444"], [0.45, "#f59e0b"], [0.55, "#64748b"], [0.75, "#38bdf8"], [1, "#10b981"]]
-            }
-          },
-          pointer: { length: "56%", width: 4, itemStyle: { color: "#f8fafc" } },
-          axisTick: { show: false },
-          splitLine: { show: false },
+          type: "gauge", startAngle: 180, endAngle: 0, min: 0, max: 100, splitNumber: 4, center: ["50%", "74%"], radius: "96%",
+          axisLine: { lineStyle: { width: 15, color: [[0.25, "#ef4444"], [0.45, "#f59e0b"], [0.55, "#64748b"], [0.75, "#38bdf8"], [1, "#10b981"]] } },
+          pointer: { length: "56%", width: 4, itemStyle: { color: "#f8fafc" } }, axisTick: { show: false }, splitLine: { show: false },
           axisLabel: { color: "#94a3b8", fontSize: 11, distance: -34 },
-          detail: {
-            valueAnimation: true,
-            offsetCenter: [0, "18%"],
-            fontSize: 28,
-            fontWeight: "bold",
-            color: cnnVal <= 25 ? "#fb7185" : cnnVal >= 75 ? "#34d399" : "#e2e8f0"
-          },
+          detail: { valueAnimation: true, offsetCenter: [0, "18%"], fontSize: 28, fontWeight: "bold", color: cnnVal <= 25 ? "#fb7185" : cnnVal >= 75 ? "#34d399" : "#e2e8f0" },
           data: [{ value: cnnVal }]
         }]
       });
 
-      // 3. HY OAS 信用防雷针（每个节点标数值）
       initChart("chart-hy").setOption({
-        backgroundColor: "transparent",
-        tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
-        grid: { left: 40, right: 20, top: 26, bottom: 24 },
+        backgroundColor: "transparent", tooltip: tip, grid: { left: 40, right: 20, top: 26, bottom: 24 },
         xAxis: { type: "category", data: d.hy_oas.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", min: 2.5, max: 5.5, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11, formatter: "{value}%" } },
         series: [{
-          name: "HY OAS",
-          type: "line",
-          smooth: true,
-          symbolSize: 6,
-          data: d.hy_oas.values,
-          lineStyle: { color: "#34d399", width: 2.5 },
-          itemStyle: { color: "#34d399" },
+          name: "HY OAS", type: "line", smooth: true, symbolSize: 6, data: d.hy_oas.values,
+          lineStyle: { color: "#34d399", width: 2.5 }, itemStyle: { color: "#34d399" },
           label: { show: true, position: "top", color: "#a7f3d0", fontSize: 10, formatter: "{c}%" },
           areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "rgba(52,211,153,0.22)" }, { offset: 1, color: "rgba(52,211,153,0)" }]) },
-          markLine: {
-            symbol: "none",
-            data: [{ yAxis: 5.0, lineStyle: { color: "#ef4444", type: "dashed", width: 1.5 }, label: { color: "#f87171", fontSize: 10, position: "insideEndTop", formatter: "5.0% 熊市红线" } }]
-          }
+          markLine: { symbol: "none", data: [{ yAxis: 5.0, lineStyle: { color: "#ef4444", type: "dashed", width: 1.5 }, label: { color: "#f87171", fontSize: 10, position: "insideEndTop", formatter: "5.0% 熊市红线" } }] }
         }]
       });
 
-      // 4. AAII 散户情绪（每个节点标数值，上下错开）
       initChart("chart-aaii").setOption({
-        backgroundColor: "transparent",
-        tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
-        legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
+        backgroundColor: "transparent", tooltip: tip, legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
         grid: { left: 40, right: 24, top: 30, bottom: 24 },
         xAxis: { type: "category", data: d.aaii.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", min: 10, max: 60, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11, formatter: "{value}%" } },
         series: [
           {
-            name: "看多 (Bullish)",
-            type: "line",
-            smooth: true,
-            symbolSize: 6,
-            data: d.aaii.bull,
-            lineStyle: { color: "#ef4444", width: 2.5 },
-            itemStyle: { color: "#ef4444" },
+            name: "看多 (Bullish)", type: "line", smooth: true, symbolSize: 6, data: d.aaii.bull,
+            lineStyle: { color: "#ef4444", width: 2.5 }, itemStyle: { color: "#ef4444" },
             label: { show: true, position: "bottom", color: "#fca5a5", fontSize: 10, formatter: "{c}%" },
-            markLine: {
-              symbol: "none",
-              data: [
-                { yAxis: 45, lineStyle: { color: "#22c55e", type: "dashed" }, label: { color: "#4ade80", fontSize: 10, position: "insideEndTop", formatter: "看空 >45% 恐慌抄底区" } },
-                { yAxis: 25, lineStyle: { color: "#ef4444", type: "dashed" }, label: { color: "#f87171", fontSize: 10, position: "insideEndBottom", formatter: "看多 <25% 极端悲观" } }
-              ]
-            }
+            markLine: { symbol: "none", label: { show: false }, data: [
+              { yAxis: 45, lineStyle: { color: "#22c55e", type: "dashed" } },
+              { yAxis: 25, lineStyle: { color: "#ef4444", type: "dashed" } }
+            ] }
           },
-          {
-            name: "看空 (Bearish)",
-            type: "line",
-            smooth: true,
-            symbolSize: 6,
-            data: d.aaii.bear,
-            lineStyle: { color: "#22c55e", width: 2.5 },
-            itemStyle: { color: "#22c55e" },
-            label: { show: true, position: "top", color: "#86efac", fontSize: 10, formatter: "{c}%" }
-          },
-          {
-            name: "中性",
-            type: "line",
-            smooth: true,
-            symbolSize: 5,
-            data: d.aaii.neutral,
-            lineStyle: { color: "#64748b", width: 1.5, type: "dotted" },
-            itemStyle: { color: "#64748b" },
-            label: { show: true, position: "bottom", color: "#94a3b8", fontSize: 10, formatter: "{c}%" }
-          }
+          { name: "看空 (Bearish)", type: "line", smooth: true, symbolSize: 6, data: d.aaii.bear, lineStyle: { color: "#22c55e", width: 2.5 }, itemStyle: { color: "#22c55e" }, label: { show: true, position: "top", color: "#86efac", fontSize: 10, formatter: "{c}%" } },
+          { name: "中性", type: "line", smooth: true, symbolSize: 5, data: d.aaii.neutral, lineStyle: { color: "#64748b", width: 1.5, type: "dotted" }, itemStyle: { color: "#64748b" }, label: { show: true, position: "bottom", color: "#94a3b8", fontSize: 10, formatter: "{c}%" } }
         ]
       });
 
-      // 5. VIX 期限结构
       const vt = d.vix_term;
       initChart("chart-vix").setOption({
-        backgroundColor: "transparent",
-        tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
-        grid: { left: 38, right: 20, top: 26, bottom: 22 },
+        backgroundColor: "transparent", tooltip: tip, grid: { left: 38, right: 20, top: 26, bottom: 22 },
         xAxis: { type: "category", data: ["VIX1D (1天)", "VIX9D (9天)", "VIX (30天)", "VIX3M (3月)"], axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         series: [{
-          type: "line",
-          smooth: 0.2,
-          symbolSize: 8,
-          data: [vt.VIX1D, vt.VIX9D, vt.VIX, vt.VIX3M],
-          lineStyle: { color: "#f59e0b", width: 2.5 },
-          itemStyle: { color: "#fbbf24" },
+          type: "line", smooth: 0.2, symbolSize: 8, data: [vt.VIX1D, vt.VIX9D, vt.VIX, vt.VIX3M],
+          lineStyle: { color: "#f59e0b", width: 2.5 }, itemStyle: { color: "#fbbf24" },
           label: { show: true, position: "top", color: "#fde68a", fontSize: 11 },
           areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "rgba(245,158,11,0.22)" }, { offset: 1, color: "rgba(245,158,11,0)" }]) }
         }]
       });
 
-      // 6. 2Y vs 10Y 美债利率（每个节点标数值，10Y 在上、2Y 在下）
+      // 美债利率图：Y轴底部自动多留 0.15% 空间，彻底避免与日期重叠
       initChart("chart-rates").setOption({
-        backgroundColor: "transparent",
-        tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
-        legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
-        grid: { left: 42, right: 20, top: 30, bottom: 26 },
+        backgroundColor: "transparent", tooltip: tip, legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
+        grid: { left: 44, right: 20, top: 32, bottom: 26 },
         xAxis: { type: "category", data: d.rates.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
-        yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11, formatter: "{value}%" } },
+        yAxis: {
+          type: "value",
+          min: (v) => +(v.min - 0.15).toFixed(2),
+          max: (v) => +(v.max + 0.10).toFixed(2),
+          splitLine: { lineStyle: { color: "#1e293b" } },
+          axisLabel: { color: "#94a3b8", fontSize: 11, formatter: "{value}%" }
+        },
         series: [
-          {
-            name: "10Y 美债",
-            type: "line",
-            smooth: true,
-            symbolSize: 6,
-            data: d.rates.y10,
-            lineStyle: { color: "#38bdf8", width: 2.5 },
-            itemStyle: { color: "#38bdf8" },
-            label: { show: true, position: "top", color: "#7dd3fc", fontSize: 10, formatter: "{c}%" }
-          },
-          {
-            name: "2Y 美债",
-            type: "line",
-            smooth: true,
-            symbolSize: 6,
-            data: d.rates.y2,
-            lineStyle: { color: "#a78bfa", width: 2, type: "dashed" },
-            itemStyle: { color: "#a78bfa" },
-            label: { show: true, position: "bottom", color: "#c4b5fd", fontSize: 10, formatter: "{c}%" }
-          }
+          { name: "10Y 美债", type: "line", smooth: true, symbolSize: 6, data: d.rates.y10, lineStyle: { color: "#38bdf8", width: 2.5 }, itemStyle: { color: "#38bdf8" }, label: { show: true, position: "top", color: "#7dd3fc", fontSize: 10, formatter: "{c}%" } },
+          { name: "2Y 美债", type: "line", smooth: true, symbolSize: 6, data: d.rates.y2, lineStyle: { color: "#a78bfa", width: 2, type: "dashed" }, itemStyle: { color: "#a78bfa" }, label: { show: true, position: "bottom", color: "#c4b5fd", fontSize: 10, formatter: "{c}%" } }
         ]
       });
 
-      // 7. 费城半导体 SOX（每个节点标整数值）
       initChart("chart-sox").setOption({
-        backgroundColor: "transparent",
-        tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
-        grid: { left: 48, right: 20, top: 26, bottom: 22 },
+        backgroundColor: "transparent", tooltip: tip, grid: { left: 48, right: 20, top: 26, bottom: 22 },
         xAxis: { type: "category", data: d.sox.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         series: [{
-          name: "SOX",
-          type: "line",
-          smooth: true,
-          symbolSize: 6,
-          data: d.sox.close,
-          lineStyle: { color: "#fbbf24", width: 2.5 },
-          itemStyle: { color: "#fbbf24" },
+          name: "SOX", type: "line", smooth: true, symbolSize: 6, data: d.sox.close,
+          lineStyle: { color: "#fbbf24", width: 2.5 }, itemStyle: { color: "#fbbf24" },
           label: { show: true, position: "top", color: "#fde68a", fontSize: 10, formatter: (p) => Math.round(p.value) },
           areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "rgba(251,191,36,0.20)" }, { offset: 1, color: "rgba(251,191,36,0)" }]) }
         }]
@@ -576,36 +384,18 @@
     }
 
     function toggleDeepSection() {
-      const sec = document.getElementById("deep-section");
-      const btn = document.getElementById("toggle-deep-btn");
-      if (sec.classList.contains("hidden")) {
-        sec.classList.remove("hidden");
-        btn.textContent = "收起面板";
-        Object.values(charts).forEach(c => c.resize());
-      } else {
-        sec.classList.add("hidden");
-        btn.textContent = "展开深度指标";
-      }
+      const sec = document.getElementById("deep-section"), btn = document.getElementById("toggle-deep-btn");
+      if (sec.classList.contains("hidden")) { sec.classList.remove("hidden"); btn.textContent = "收起面板"; Object.values(charts).forEach(c => c.resize()); }
+      else { sec.classList.add("hidden"); btn.textContent = "展开深度指标"; }
     }
 
-    async function loadMarketData(isManual = false) {
+    async function loadMarketData() {
       try {
         const res = await fetch("./data.json?t=" + Date.now());
-        if (!res.ok) throw new Error("No external data.json");
+        if (!res.ok) throw new Error("No data.json");
         const remote = await res.json();
-        const merged = {
-          ...FALLBACK_DATA,
-          ...remote,
-          spx: remote.spx || FALLBACK_DATA.spx,
-          hy_oas: remote.hy_oas || FALLBACK_DATA.hy_oas,
-          vix_term: remote.vix_term || FALLBACK_DATA.vix_term,
-          rates: remote.rates || FALLBACK_DATA.rates,
-          sox: remote.sox || FALLBACK_DATA.sox
-        };
-        renderAll(merged);
-      } catch (e) {
-        renderAll(FALLBACK_DATA);
-      }
+        renderAll({ ...FALLBACK_DATA, ...remote, spx: remote.spx || FALLBACK_DATA.spx, hy_oas: remote.hy_oas || FALLBACK_DATA.hy_oas, vix_term: remote.vix_term || FALLBACK_DATA.vix_term, rates: remote.rates || FALLBACK_DATA.rates, sox: remote.sox || FALLBACK_DATA.sox });
+      } catch (e) { renderAll(FALLBACK_DATA); }
     }
 
     window.addEventListener("resize", () => Object.values(charts).forEach(c => c.resize()));
