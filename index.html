@@ -51,7 +51,6 @@
 
     <!-- 第一层：顶部 3 列等宽结论区（10 秒极简视图） -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <!-- 卡片 01 -->
       <div class="card p-5 flex flex-col justify-between border-t-2 border-t-amber-400">
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -65,7 +64,6 @@
         </div>
       </div>
 
-      <!-- 卡片 02 -->
       <div class="card p-5 flex flex-col justify-between border-t-2 border-t-rose-500">
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -79,7 +77,6 @@
         </div>
       </div>
 
-      <!-- 卡片 03 -->
       <div class="card p-5 flex flex-col justify-between border-t-2 border-t-emerald-400">
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -97,7 +94,7 @@
     <!-- 第二层：3 列等宽核心图表区 -->
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-      <!-- 核心图 1：趋势水位（SPX + 50/200MA + $S5FI） -->
+      <!-- 核心图 1：趋势水位 -->
       <div class="card p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
@@ -109,7 +106,6 @@
           </p>
           <div id="chart-spx" class="w-full h-52 mt-2"></div>
         </div>
-        <!-- 底部信息条：$S5FI 进度条 -->
         <div class="sub-card p-3 mt-3 min-h-[76px] flex flex-col justify-center">
           <div class="flex items-center justify-between text-xs mb-1.5">
             <span class="text-slate-300 font-medium">标普 500 站上 50 日线占比 ($S5FI)</span>
@@ -128,7 +124,7 @@
         </div>
       </div>
 
-      <!-- 核心图 2：情绪温度计（CNN 恐慌贪婪） -->
+      <!-- 核心图 2：情绪温度计 -->
       <div class="card p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
@@ -140,7 +136,6 @@
           </p>
           <div id="chart-cnn" class="w-full h-52 mt-2"></div>
         </div>
-        <!-- 底部信息条：操作阈值对照 -->
         <div class="sub-card p-3 mt-3 min-h-[76px] grid grid-cols-2 gap-2 items-center">
           <div class="border-r border-slate-700/70 pr-2">
             <div class="text-[11px] text-slate-400">左侧关注买回区</div>
@@ -153,7 +148,7 @@
         </div>
       </div>
 
-      <!-- 核心图 3：信用防雷针（HY OAS + AI 算力链 CDS） -->
+      <!-- 核心图 3：信用防雷针 -->
       <div class="card p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
@@ -165,7 +160,6 @@
           </p>
           <div id="chart-hy" class="w-full h-52 mt-2"></div>
         </div>
-        <!-- 底部信息条：AI 算力链 5Y CDS 对照 -->
         <div class="sub-card p-3 mt-3 min-h-[76px] grid grid-cols-2 gap-2 items-center">
           <div class="border-r border-slate-700/70 pr-2">
             <div class="text-[11px] text-slate-400">甲骨文 (ORCL) 5Y CDS</div>
@@ -180,7 +174,7 @@
 
     </section>
 
-    <!-- 第三层：深度验证面板（默认展开，可一键收起） -->
+    <!-- 第三层：深度验证面板（2×2 机构视角） -->
     <section class="space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
         <div class="flex items-center gap-2">
@@ -194,7 +188,7 @@
 
       <div id="deep-section" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        <!-- 左上：AAII 散户情绪（红多绿空） -->
+        <!-- 左上：AAII 散户情绪 -->
         <div class="card p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between">
@@ -206,7 +200,7 @@
             <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
               红线看多、绿线看空。看空 &gt; 45% 或看多 &lt; 25% 时，往往暗示散户割肉接近尾声。
             </p>
-            <div id="chart-aaii" class="w-full h-56 mt-2"></div>
+            <div id="chart-aaii" class="w-full h-48 mt-2"></div>
           </div>
         </div>
 
@@ -222,7 +216,7 @@
             <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
               比值 &gt; 1.0 为倒挂（近端恐慌高于远端，属急性踩踏）；&lt; 1.0 为正常正挂结构。
             </p>
-            <div id="chart-vix" class="w-full h-56 mt-2"></div>
+            <div id="chart-vix" class="w-full h-48 mt-2"></div>
           </div>
         </div>
 
@@ -236,20 +230,23 @@
             <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
               10 年期决定成长股估值锚，2 年期反映加息预期；实际利率回落利好科技股。
             </p>
-            <div id="chart-rates" class="w-full h-52 mt-2"></div>
+            <div id="chart-rates" class="w-full h-44 mt-2"></div>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-3">
             <div class="sub-card p-2.5">
               <div class="text-[11px] text-slate-400">2s10s 期限利差</div>
               <div id="spread-2s10s" class="text-xs sm:text-sm font-mono font-semibold text-slate-200 mt-0.5">+0.24%</div>
+              <div class="text-[10px] text-slate-400">正斜率未倒挂</div>
             </div>
             <div class="sub-card p-2.5">
               <div class="text-[11px] text-slate-400">10Y 实际利率 (TIPS)</div>
               <div id="tips-10y" class="text-xs sm:text-sm font-mono font-semibold text-sky-300 mt-0.5">2.38%</div>
+              <div class="text-[10px] text-slate-400">成长股估值锚</div>
             </div>
             <div class="sub-card p-2.5 border-rose-500/40 bg-rose-950/20">
               <div class="text-[11px] text-rose-300">FedWatch (12/9)</div>
               <div class="text-xs sm:text-sm font-mono font-bold text-rose-400 mt-0.5">加息25bp · 99.4%</div>
+              <div class="text-[10px] text-rose-300/80">→ 4.00–4.25%</div>
             </div>
           </div>
         </div>
@@ -264,7 +261,7 @@
             <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">
               SOX/SPX 衡量半导体相对强弱；NAAIM 看机构真金白银仓位，Put/Call 看期权避险度。
             </p>
-            <div id="chart-sox" class="w-full h-52 mt-2"></div>
+            <div id="chart-sox" class="w-full h-44 mt-2"></div>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-3">
             <div class="sub-card p-2.5">
@@ -291,7 +288,6 @@
   </main>
 
   <script>
-    // 内置 2026-11-25 真实收盘快照（当同目录无 data.json 时自动使用）
     const FALLBACK_DATA = {
       updated_at: "2026-11-25 收盘快照",
       spx: {
@@ -346,7 +342,6 @@
     }
 
     function renderAll(d) {
-      // 更新顶部时间与徽章
       document.getElementById("data-status").textContent = "数据更新：" + (d.updated_at || "2026-11-25");
       if (d.spx) document.getElementById("spx-badge").textContent = d.spx.latest.toLocaleString();
       if (d.hy_oas) {
@@ -373,8 +368,7 @@
       }
 
       // 1. SPX 趋势水位图
-      const cSpx = initChart("chart-spx");
-      cSpx.setOption({
+      initChart("chart-spx").setOption({
         backgroundColor: "transparent",
         tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
         grid: { left: 46, right: 16, top: 22, bottom: 24 },
@@ -399,10 +393,9 @@
         }]
       });
 
-      // 2. CNN 情绪仪表盘
-      const cCnn = initChart("chart-cnn");
+      // 2. CNN 情绪仪表盘（修复刻度与指针位置）
       const cnnVal = d.cnn ?? 15;
-      cCnn.setOption({
+      initChart("chart-cnn").setOption({
         backgroundColor: "transparent",
         series: [{
           type: "gauge",
@@ -410,21 +403,22 @@
           endAngle: 0,
           min: 0,
           max: 100,
+          splitNumber: 4,
           center: ["50%", "74%"],
-          radius: "110%",
+          radius: "96%",
           axisLine: {
             lineStyle: {
-              width: 16,
+              width: 15,
               color: [[0.25, "#ef4444"], [0.45, "#f59e0b"], [0.55, "#64748b"], [0.75, "#38bdf8"], [1, "#10b981"]]
             }
           },
-          pointer: { length: "62%", width: 4, itemStyle: { color: "#f8fafc" } },
+          pointer: { length: "56%", width: 4, itemStyle: { color: "#f8fafc" } },
           axisTick: { show: false },
           splitLine: { show: false },
-          axisLabel: { color: "#94a3b8", fontSize: 10, distance: -24 },
+          axisLabel: { color: "#94a3b8", fontSize: 11, distance: -34 },
           detail: {
             valueAnimation: true,
-            offsetCenter: [0, "-12%"],
+            offsetCenter: [0, "18%"],
             fontSize: 28,
             fontWeight: "bold",
             color: cnnVal <= 25 ? "#fb7185" : cnnVal >= 75 ? "#34d399" : "#e2e8f0"
@@ -434,8 +428,7 @@
       });
 
       // 3. HY OAS 信用防雷针
-      const cHy = initChart("chart-hy");
-      cHy.setOption({
+      initChart("chart-hy").setOption({
         backgroundColor: "transparent",
         tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
         grid: { left: 40, right: 16, top: 22, bottom: 24 },
@@ -456,13 +449,12 @@
         }]
       });
 
-      // 4. AAII 散户情绪（红多绿空）
-      const cAaii = initChart("chart-aaii");
-      cAaii.setOption({
+      // 4. AAII 散户情绪
+      initChart("chart-aaii").setOption({
         backgroundColor: "transparent",
         tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
         legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
-        grid: { left: 40, right: 18, top: 30, bottom: 24 },
+        grid: { left: 40, right: 18, top: 28, bottom: 22 },
         xAxis: { type: "category", data: d.aaii.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", min: 10, max: 60, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11, formatter: "{value}%" } },
         series: [
@@ -487,12 +479,11 @@
       });
 
       // 5. VIX 期限结构
-      const cVix = initChart("chart-vix");
       const vt = d.vix_term;
-      cVix.setOption({
+      initChart("chart-vix").setOption({
         backgroundColor: "transparent",
         tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
-        grid: { left: 38, right: 18, top: 24, bottom: 26 },
+        grid: { left: 38, right: 18, top: 24, bottom: 22 },
         xAxis: { type: "category", data: ["VIX1D (1天)", "VIX9D (9天)", "VIX (30天)", "VIX3M (3月)"], axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         series: [{
@@ -507,27 +498,25 @@
         }]
       });
 
-      // 6. 2Y vs 10Y 美债利率
-      const cRates = initChart("chart-rates");
-      cRates.setOption({
+      // 6. 2Y vs 10Y 美债利率（加上末端数值标注）
+      initChart("chart-rates").setOption({
         backgroundColor: "transparent",
         tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
         legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
-        grid: { left: 42, right: 16, top: 28, bottom: 24 },
+        grid: { left: 42, right: 26, top: 26, bottom: 22 },
         xAxis: { type: "category", data: d.rates.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11, formatter: "{value}%" } },
         series: [
-          { name: "10Y 美债", type: "line", smooth: true, data: d.rates.y10, lineStyle: { color: "#38bdf8", width: 2.5 }, itemStyle: { color: "#38bdf8" } },
-          { name: "2Y 美债", type: "line", smooth: true, data: d.rates.y2, lineStyle: { color: "#a78bfa", width: 2, type: "dashed" }, itemStyle: { color: "#a78bfa" } }
+          { name: "10Y 美债", type: "line", smooth: true, data: d.rates.y10, lineStyle: { color: "#38bdf8", width: 2.5 }, itemStyle: { color: "#38bdf8" }, endLabel: { show: true, formatter: "{c}%", color: "#38bdf8", fontSize: 10 } },
+          { name: "2Y 美债", type: "line", smooth: true, data: d.rates.y2, lineStyle: { color: "#a78bfa", width: 2, type: "dashed" }, itemStyle: { color: "#a78bfa" }, endLabel: { show: true, formatter: "{c}%", color: "#a78bfa", fontSize: 10 } }
         ]
       });
 
       // 7. 费城半导体 SOX
-      const cSox = initChart("chart-sox");
-      cSox.setOption({
+      initChart("chart-sox").setOption({
         backgroundColor: "transparent",
         tooltip: { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } },
-        grid: { left: 48, right: 16, top: 22, bottom: 24 },
+        grid: { left: 48, right: 16, top: 20, bottom: 22 },
         xAxis: { type: "category", data: d.sox.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         series: [{
