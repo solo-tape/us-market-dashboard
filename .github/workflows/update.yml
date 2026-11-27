@@ -2,10 +2,8 @@ name: Daily Market Update
 
 on:
   schedule:
-    # 周一至周五 美东冬令时 16:20（收盘后20分钟）
-    - cron: '20 21 * * 1-5'
-    # 周二至周六 北京时间 08:00（补抓延迟发布的 FRED 债券数据）
-    - cron: '0 0 * * 2-6'
+    - cron: '20 21 * * 1-5'   # UTC 周一至周五 21:20 = 北京时间周二至周六 05:20
+    - cron: '0 0 * * 2-6'     # UTC 周二至周六 00:00 = 北京时间周二至周六 08:00
   workflow_dispatch:
 
 permissions:
