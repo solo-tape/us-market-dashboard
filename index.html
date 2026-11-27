@@ -254,6 +254,12 @@
     const initChart = (id) => charts[id] || (charts[id] = echarts.init(document.getElementById(id)));
     const tip = { trigger: "axis", backgroundColor: "#0f172a", borderColor: "#334155", textStyle: { color: "#e2e8f0", fontSize: 12 } };
 
+    // 稀疏标注函数：始终显示最后一天，其余按 step 间隔显示
+    const sparseFmt = (total, step, fn) => (p) => {
+      if (p.dataIndex === total - 1 || (total - 1 - p.dataIndex) % step === 0) return fn(p.value);
+      return "";
+    };
+
     function renderAll(d) {
       document.getElementById("data-status").textContent = "数据更新：" + (d.updated_at || "2026-11-25");
       if (d.spx) document.getElementById("spx-badge").textContent = d.spx.latest.toLocaleString();
@@ -277,14 +283,16 @@
         document.getElementById("vix-ratio-badge").textContent = `VIX / VIX3M = ${r.toFixed(2)} · ${r > 1 ? "倒挂(急性恐慌)" : "正挂(正常)"}`;
       }
 
+      // 1. SPX（每 3 天标一次 + 防重叠）
       initChart("chart-spx").setOption({
-        backgroundColor: "transparent", tooltip: tip, grid: { left: 46, right: 20, top: 26, bottom: 24 },
+        backgroundColor: "transparent", tooltip: tip, grid: { left: 46, right: 24, top: 26, bottom: 24 },
         xAxis: { type: "category", data: d.spx.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         series: [{
-          name: "SPX", type: "line", smooth: true, symbolSize: 6, data: d.spx.close,
+          name: "SPX", type: "line", smooth: true, symbolSize: 5, data: d.spx.close,
           lineStyle: { color: "#38bdf8", width: 2.5 }, itemStyle: { color: "#38bdf8" },
-          label: { show: true, position: "top", color: "#bae6fd", fontSize: 10, formatter: (p) => Math.round(p.value) },
+          label: { show: true, position: "top", color: "#bae6fd", fontSize: 10, formatter: sparseFmt(d.spx.close.length, 3, v => Math.round(v)) },
+          labelLayout: { hideOverlap: true },
           areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "rgba(56,189,248,0.22)" }, { offset: 1, color: "rgba(56,189,248,0)" }]) },
           markLine: { symbol: "none", label: { fontSize: 10, position: "insideEndTop" }, data: [
             d.spx.ma50 ? { yAxis: d.spx.ma50, lineStyle: { color: "#f59e0b", type: "dashed" }, label: { color: "#fbbf24", formatter: "50MA: {c}" } } : null,
@@ -293,6 +301,7 @@
         }]
       });
 
+      // 2. CNN 情绪仪表盘
       const cnnVal = d.cnn ?? 15;
       initChart("chart-cnn").setOption({
         backgroundColor: "transparent",
@@ -306,19 +315,22 @@
         }]
       });
 
+      // 3. HY OAS（每 3 天标一次 + 防重叠）
       initChart("chart-hy").setOption({
-        backgroundColor: "transparent", tooltip: tip, grid: { left: 40, right: 20, top: 26, bottom: 24 },
+        backgroundColor: "transparent", tooltip: tip, grid: { left: 40, right: 24, top: 26, bottom: 24 },
         xAxis: { type: "category", data: d.hy_oas.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", min: 2.5, max: 5.5, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11, formatter: "{value}%" } },
         series: [{
-          name: "HY OAS", type: "line", smooth: true, symbolSize: 6, data: d.hy_oas.values,
+          name: "HY OAS", type: "line", smooth: true, symbolSize: 5, data: d.hy_oas.values,
           lineStyle: { color: "#34d399", width: 2.5 }, itemStyle: { color: "#34d399" },
-          label: { show: true, position: "top", color: "#a7f3d0", fontSize: 10, formatter: "{c}%" },
+          label: { show: true, position: "top", color: "#a7f3d0", fontSize: 10, formatter: sparseFmt(d.hy_oas.values.length, 3, v => v + "%") },
+          labelLayout: { hideOverlap: true },
           areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "rgba(52,211,153,0.22)" }, { offset: 1, color: "rgba(52,211,153,0)" }]) },
           markLine: { symbol: "none", data: [{ yAxis: 5.0, lineStyle: { color: "#ef4444", type: "dashed", width: 1.5 }, label: { color: "#f87171", fontSize: 10, position: "insideEndTop", formatter: "5.0% 熊市红线" } }] }
         }]
       });
 
+      // 4. AAII（周度仅 4 个点，全部显示）
       initChart("chart-aaii").setOption({
         backgroundColor: "transparent", tooltip: tip, legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
         grid: { left: 40, right: 24, top: 30, bottom: 24 },
@@ -339,6 +351,7 @@
         ]
       });
 
+      // 5. VIX 期限结构（4 个点，全部显示）
       const vt = d.vix_term;
       initChart("chart-vix").setOption({
         backgroundColor: "transparent", tooltip: tip, grid: { left: 38, right: 20, top: 26, bottom: 22 },
@@ -352,10 +365,10 @@
         }]
       });
 
-      // 美债利率图：Y轴底部自动多留 0.15% 空间，彻底避免与日期重叠
+      // 6. 美债利率（每 2 天标一次 + Y轴留白 + 防重叠）
       initChart("chart-rates").setOption({
         backgroundColor: "transparent", tooltip: tip, legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
-        grid: { left: 44, right: 20, top: 32, bottom: 26 },
+        grid: { left: 44, right: 24, top: 32, bottom: 26 },
         xAxis: { type: "category", data: d.rates.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: {
           type: "value",
@@ -365,19 +378,31 @@
           axisLabel: { color: "#94a3b8", fontSize: 11, formatter: "{value}%" }
         },
         series: [
-          { name: "10Y 美债", type: "line", smooth: true, symbolSize: 6, data: d.rates.y10, lineStyle: { color: "#38bdf8", width: 2.5 }, itemStyle: { color: "#38bdf8" }, label: { show: true, position: "top", color: "#7dd3fc", fontSize: 10, formatter: "{c}%" } },
-          { name: "2Y 美债", type: "line", smooth: true, symbolSize: 6, data: d.rates.y2, lineStyle: { color: "#a78bfa", width: 2, type: "dashed" }, itemStyle: { color: "#a78bfa" }, label: { show: true, position: "bottom", color: "#c4b5fd", fontSize: 10, formatter: "{c}%" } }
+          {
+            name: "10Y 美债", type: "line", smooth: true, symbolSize: 5, data: d.rates.y10,
+            lineStyle: { color: "#38bdf8", width: 2.5 }, itemStyle: { color: "#38bdf8" },
+            label: { show: true, position: "top", color: "#7dd3fc", fontSize: 10, formatter: sparseFmt(d.rates.y10.length, 2, v => v + "%") },
+            labelLayout: { hideOverlap: true }
+          },
+          {
+            name: "2Y 美债", type: "line", smooth: true, symbolSize: 5, data: d.rates.y2,
+            lineStyle: { color: "#a78bfa", width: 2, type: "dashed" }, itemStyle: { color: "#a78bfa" },
+            label: { show: true, position: "bottom", color: "#c4b5fd", fontSize: 10, formatter: sparseFmt(d.rates.y2.length, 2, v => v + "%") },
+            labelLayout: { hideOverlap: true }
+          }
         ]
       });
 
+      // 7. 半导体 SOX（每 2 天标一次 + 防重叠）
       initChart("chart-sox").setOption({
-        backgroundColor: "transparent", tooltip: tip, grid: { left: 48, right: 20, top: 26, bottom: 22 },
+        backgroundColor: "transparent", tooltip: tip, grid: { left: 48, right: 24, top: 26, bottom: 22 },
         xAxis: { type: "category", data: d.sox.dates, axisLine: { lineStyle: { color: "#334155" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#1e293b" } }, axisLabel: { color: "#94a3b8", fontSize: 11 } },
         series: [{
-          name: "SOX", type: "line", smooth: true, symbolSize: 6, data: d.sox.close,
+          name: "SOX", type: "line", smooth: true, symbolSize: 5, data: d.sox.close,
           lineStyle: { color: "#fbbf24", width: 2.5 }, itemStyle: { color: "#fbbf24" },
-          label: { show: true, position: "top", color: "#fde68a", fontSize: 10, formatter: (p) => Math.round(p.value) },
+          label: { show: true, position: "top", color: "#fde68a", fontSize: 10, formatter: sparseFmt(d.sox.close.length, 2, v => Math.round(v)) },
+          labelLayout: { hideOverlap: true },
           areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "rgba(251,191,36,0.20)" }, { offset: 1, color: "rgba(251,191,36,0)" }]) }
         }]
       });
