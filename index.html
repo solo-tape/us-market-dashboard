@@ -291,31 +291,70 @@
           </div>
         </div>
 
-        <!-- 右下：SOX -->
+        <!-- 右下：SOX + NAAIM + CFTC 参考栏 -->
         <div class="card p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-semibold text-white">半导体主线 (SOX) 与机构/期权验证</h3>
               <span id="sox-badge" class="text-xs font-mono text-amber-300">--</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">SOX/SPX 衡量半导体相对强弱；NAAIM 看机构真金白银仓位，Put/Call 看期权避险度。</p>
-            <div id="chart-sox" class="w-full h-48 mt-2"></div>
+            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">SOX/SPX 衡量半导体相对强弱；NAAIM 看机构仓位（计分），下方 CFTC 期货持仓作官方法定佐证。</p>
+            <div id="chart-sox" class="w-full h-44 mt-2"></div>
           </div>
-          <div class="grid grid-cols-3 gap-2 mt-3">
-            <div class="sub-card p-2.5">
-              <div class="text-[11px] text-slate-400">SOX / SPX 比值</div>
-              <div id="sox-spx-val" class="text-xs sm:text-sm font-mono font-semibold text-emerald-400 mt-0.5">--</div>
-              <div id="sox-spx-ma" class="text-[10px] text-slate-400">50日均值 --</div>
+
+          <div class="space-y-2.5 mt-3">
+            <div class="grid grid-cols-3 gap-2">
+              <div class="sub-card p-2.5">
+                <div class="text-[11px] text-slate-400">SOX / SPX 比值</div>
+                <div id="sox-spx-val" class="text-xs sm:text-sm font-mono font-semibold text-emerald-400 mt-0.5">--</div>
+                <div id="sox-spx-ma" class="text-[10px] text-slate-400">50日均值 --</div>
+              </div>
+              <div class="sub-card p-2.5">
+                <div class="text-[11px] text-slate-400">Put / Call (10D)</div>
+                <div id="put-call-val" class="text-xs sm:text-sm font-mono font-semibold text-slate-200 mt-0.5">--</div>
+                <div class="text-[10px] text-slate-400">&lt;0.5贪婪 · &gt;1.0恐慌</div>
+              </div>
+              <div class="sub-card p-2.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[11px] text-slate-400">NAAIM 仓位</span>
+                  <span id="naaim-date" class="text-[10px] font-mono text-slate-500"></span>
+                </div>
+                <div id="naaim-val" class="text-xs sm:text-sm font-mono font-semibold text-amber-300 mt-0.5">--</div>
+                <div class="text-[10px] text-slate-400">&lt;30清仓 · &gt;100过热</div>
+              </div>
             </div>
-            <div class="sub-card p-2.5">
-              <div class="text-[11px] text-slate-400">Put / Call (10D)</div>
-              <div id="put-call-val" class="text-xs sm:text-sm font-mono font-semibold text-slate-200 mt-0.5">--</div>
-              <div class="text-[10px] text-slate-400">&lt;0.5贪婪 · &gt;1.0恐慌</div>
-            </div>
-            <div class="sub-card p-2.5">
-              <div class="text-[11px] text-slate-400">NAAIM 机构仓位</div>
-              <div id="naaim-val" class="text-xs sm:text-sm font-mono font-semibold text-amber-300 mt-0.5">--</div>
-              <div class="text-[10px] text-slate-400">&lt;30清仓 · &gt;100过热</div>
+
+            <!-- 新增：CFTC 标普 500 期货机构持仓（仅参考，不计分） -->
+            <div class="sub-card p-2.5 space-y-2 border-slate-700/70">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[11px] font-medium text-slate-200">CFTC 标普 500 期货机构持仓</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-700/80 text-slate-300 border border-slate-600/60">仅参考 · 不计分</span>
+                </div>
+                <span id="cftc-date" class="text-[10px] font-mono text-slate-400">待更新</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 items-center">
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-slate-400">资管净多占比</span>
+                    <span id="cftc-am-val" class="font-mono font-semibold text-sky-300">--</span>
+                  </div>
+                  <div class="relative w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="cftc-rank-bar" class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-rose-400 rounded-full transition-all duration-500" style="width: 50%"></div>
+                  </div>
+                  <div class="flex items-center justify-between text-[10px] text-slate-400">
+                    <span id="cftc-rank-text">近1年分位 --</span>
+                    <span id="cftc-wow-text" class="font-mono">周变动 --</span>
+                  </div>
+                </div>
+
+                <div class="border-l border-slate-700/70 pl-3 space-y-0.5">
+                  <div class="text-[11px] text-slate-400">对冲/杠杆基金净持仓</div>
+                  <div id="cftc-lev-val" class="text-xs font-mono font-semibold text-slate-200">--</div>
+                  <div id="cftc-lev-sub" class="text-[10px] text-slate-400">占总持仓 --</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -410,7 +449,7 @@
       cnnBadge.textContent = `${cnn} · ${cnnLabel}`;
       cnnBadge.className = "text-xs font-mono font-semibold " + (cnn <= 25 || cnn >= 75 ? "text-rose-400" : cnn <= 45 ? "text-amber-300" : "text-emerald-400");
 
-      // === 四维加权打分引擎 ===
+      // === 四维加权打分引擎（继续严格使用 NAAIM，CFTC 不参与计分） ===
       const sCnn = cnn <= 25 ? 90 : cnn <= 45 ? 72 : cnn <= 55 ? 50 : cnn <= 75 ? 32 : 12;
       const sAaii = aaiiBear >= 45 ? 85 : aaiiBear >= 35 ? 65 : aaiiBear >= 25 ? 45 : 25;
       const sNaaim = naaim <= 45 ? 85 : naaim <= 65 ? 70 : naaim <= 85 ? 45 : 20;
@@ -468,7 +507,7 @@
       sumVeto.textContent = isVeto ? `✕ 信用红线否决（HY OAS ${hy.toFixed(2)}% ≥ 5.0%）` : `✓ 信用未否决（HY OAS ${hy.toFixed(2)}% < 5.0%）`;
       sumVeto.className = "text-xs sm:text-sm font-medium " + (isVeto ? "text-rose-400" : "text-emerald-400");
 
-      // === 卡片 03：纯文字综合得分（无绿色底框） ===
+      // === 卡片 03：纯文字综合得分 ===
       if (isVeto) {
         setCardStyle("card-03", "rose", `综合得分 ${totalScore} 分（否决）`, "防御减仓 · 现金为王",
           `高收益债利差已升至 ${hy.toFixed(2)}%（突破 5.0% 熊市红线），触发一票否决机制。无视短线超卖信号，优先压缩风险敞口、保留现金。`, true);
@@ -504,7 +543,6 @@
         el.className = "text-xs font-mono font-semibold " + (hy >= 5.0 ? "text-rose-400" : "text-emerald-400");
       }
 
-      // 真实 FRED 分级信用利差
       const igBps = d.credit_detail?.ig_oas_bps;
       const cccBps = d.credit_detail?.ccc_oas_bps;
       document.getElementById("ig-oas-val").innerHTML = igBps != null
@@ -522,7 +560,6 @@
         if (d.rates.tips10 != null) document.getElementById("tips-10y").textContent = d.rates.tips10.toFixed(2) + "%";
       }
 
-      // Polymarket 美联储议息实时概率（失败自动回退到 FRED 政策利率）
       const fedCard = document.getElementById("fed-card");
       const fedLabel = document.getElementById("fed-card-label");
       const fedVal = document.getElementById("fed-card-val");
@@ -566,6 +603,34 @@
       const naaimVal = typeof d.naaim === "number" ? d.naaim : FALLBACK_DATA.naaim;
       document.getElementById("put-call-val").textContent = pcVal.toFixed(2);
       document.getElementById("naaim-val").textContent = naaimVal.toFixed(1);
+      document.getElementById("naaim-date").textContent = d.naaim_date || "";
+
+      // 渲染 CFTC 标普 500 期货机构持仓参考条（不参与打分）
+      if (d.cftc_spx) {
+        const c = d.cftc_spx;
+        document.getElementById("cftc-date").textContent = `截至 ${c.report_date} (周报)`;
+        const amSign = c.asset_mgr_net_pct >= 0 ? "+" : "";
+        document.getElementById("cftc-am-val").textContent = `${amSign}${c.asset_mgr_net_pct.toFixed(1)}%`;
+
+        const rank = Math.min(100, Math.max(0, c.asset_mgr_pct_rank_1y));
+        document.getElementById("cftc-rank-bar").style.width = `${rank}%`;
+        const rankLabel = rank <= 20 ? "轻仓" : rank >= 85 ? "拥挤" : "中性";
+        const rankColor = rank <= 20 ? "text-emerald-400" : rank >= 85 ? "text-rose-400" : "text-slate-300";
+        document.getElementById("cftc-rank-text").innerHTML = `近1年分位 <span class="font-mono font-semibold ${rankColor}">${rank.toFixed(0)}% (${rankLabel})</span>`;
+
+        const wow = c.asset_mgr_wow_pct;
+        const wowSign = wow > 0 ? "+" : "";
+        const wowColor = wow > 0 ? "text-rose-400" : wow < 0 ? "text-emerald-400" : "text-slate-400";
+        document.getElementById("cftc-wow-text").innerHTML = `周 <span class="${wowColor}">${wowSign}${wow.toFixed(2)}%</span>`;
+
+        const levSign = c.lev_funds_net_k >= 0 ? "+" : "";
+        const levPctSign = c.lev_funds_net_pct >= 0 ? "+" : "";
+        const levColor = c.lev_funds_net_k >= 0 ? "text-rose-400" : "text-emerald-400";
+        const levEl = document.getElementById("cftc-lev-val");
+        levEl.className = `text-xs font-mono font-semibold ${levColor}`;
+        levEl.textContent = `${levSign}${(c.lev_funds_net_k / 10).toFixed(1)} 万张`;
+        document.getElementById("cftc-lev-sub").textContent = `占总持仓 ${levPctSign}${c.lev_funds_net_pct.toFixed(1)}%`;
+      }
 
       if (d.vix_term && d.vix_term.ratio !== undefined) {
         const r = d.vix_term.ratio;
