@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-27 23:59 UTC",
+  "updated_at": "2026-11-28 00:16 UTC",
   "spx": {
     "dates": [
       "11/06",
@@ -75,7 +75,8 @@
       9186.71
     ],
     "latest": 9186.71,
-    "sox_spx_ratio": 1.259
+    "sox_spx_ratio": 1.259,
+    "sox_spx_50ma": 1.466
   },
   "vix_term": {
     "VIX1D": 25.55,
@@ -216,5 +217,14 @@
       17.8,
       24.4
     ]
+  },
+  "cds": {
+    "orcl": 238,
+    "coreweave": 1279
+  },
+  "fedwatch": {
+    "meeting_date": "12/16",
+    "action": "降息25bp",
+    "probability": 91.6
   }
 }
