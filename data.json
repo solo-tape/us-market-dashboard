@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-28 03:21 UTC",
+  "updated_at": "2026-11-28 06:16 UTC",
   "spx": {
     "dates": [
       "11/06",
@@ -224,9 +224,9 @@
   },
   "fed_policy": {
     "effr": 3.88,
-    "implied_rate": 4.14,
+    "implied_rate": 3.88,
     "source": "ZQ期货",
-    "diff_bps": 26
+    "diff_bps": 0
   },
   "put_call": 0.65,
   "polymarket_fed": {
@@ -234,7 +234,7 @@
     "action": "加息25bp",
     "direction": "hike",
     "prob": 94.5,
-    "runner_up": "次选 按兵不动 3.7%",
+    "runner_up": "次选 按兵不动 3.9%",
     "event_title": "Fed Decision in December?"
   },
   "cftc_spx": {
