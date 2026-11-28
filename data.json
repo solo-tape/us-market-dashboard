@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-28 00:16 UTC",
+  "updated_at": "2026-11-28 00:21 UTC",
   "spx": {
     "dates": [
       "11/06",
@@ -218,13 +218,15 @@
       24.4
     ]
   },
-  "cds": {
-    "orcl": 238,
-    "coreweave": 1279
+  "credit_detail": {
+    "ig_oas_bps": 99,
+    "ccc_oas_bps": 1417
   },
-  "fedwatch": {
-    "meeting_date": "12/16",
-    "action": "降息25bp",
-    "probability": 91.6
-  }
+  "fed_policy": {
+    "effr": 3.88,
+    "implied_rate": 4.14,
+    "source": "ZQ期货",
+    "diff_bps": 26
+  },
+  "put_call": 0.71
 }
