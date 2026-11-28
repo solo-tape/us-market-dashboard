@@ -2,7 +2,8 @@ import io
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urljoin
 
 import pandas as pd
 import requests
@@ -29,11 +30,13 @@ def load_existing():
     return {}
 
 
-def fetch_yf_history(ticker, period="1y"):
+def fetch_yf_raw(ticker, period="1y"):
+    """保留完整日期索引（YYYY-MM-DD），避免跨年同月日重复导致对齐出错"""
     df = yf.Ticker(ticker).history(period=period)
     if df.empty:
         return pd.DataFrame()
-    df.index = df.index.strftime("%m/%d")
+    df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
+    df = df[~df.index.duplicated(keep="last")]
     return df
 
 
@@ -136,63 +139,121 @@ def fetch_aaii(limit=8):
     return None
 
 
+def _extract_latest_naaim_from_df(df):
+    """从表格中自动按日期列 + 数值列提取最新一期 NAAIM 指数"""
+    if df is None or df.shape[1] < 2:
+        return None
+    sub = df.iloc[:, :2].copy()
+    sub.columns = ["date", "val"]
+    sub["date"] = pd.to_datetime(sub["date"], errors="coerce")
+    sub["val"] = pd.to_numeric(sub["val"], errors="coerce")
+    sub = sub.dropna(subset=["date", "val"])
+    sub = sub[(sub["val"] >= -200) & (sub["val"] <= 200)]
+    if not sub.empty:
+        sub = sub.sort_values("date")
+        return round(float(sub["val"].iloc[-1]), 2)
+    return None
+
+
 def fetch_naaim():
+    """优先拉取 NAAIM 官方页面挂出的 Excel 文件，其次按日期列解析 HTML 表格与文本"""
     url = "https://www.naaim.org/programs/naaim-exposure-index/"
     try:
         r = requests.get(url, headers=HEADERS, timeout=15)
         r.raise_for_status()
+        soup = BeautifulSoup(r.text, "lxml")
+
+        # 1) 优先抓取页面里的官方 Excel 下载链接 (.xlsx / .xls)
+        for a in soup.find_all("a", href=True):
+            href = a["href"].strip()
+            if re.search(r"\.xlsx?(\?|$)", href, re.IGNORECASE):
+                full_url = urljoin(url, href)
+                try:
+                    xr = requests.get(full_url, headers=HEADERS, timeout=15)
+                    xr.raise_for_status()
+                    xdf = pd.read_excel(io.BytesIO(xr.content))
+                    val = _extract_latest_naaim_from_df(xdf)
+                    if val is not None:
+                        print(f"NAAIM from Excel ({full_url}): {val}")
+                        return val
+                except Exception as xe:
+                    print(f"NAAIM Excel parse failed ({full_url}): {xe}")
+
+        # 2) 解析网页 HTML 表格（不依赖表头名，按日期列识别）
         try:
             tables = pd.read_html(io.StringIO(r.text))
             for tbl in tables:
-                for col in tbl.columns:
-                    if "naaim" in str(col).lower() or "number" in str(col).lower():
-                        val = pd.to_numeric(tbl[col], errors="coerce").dropna()
-                        if not val.empty:
-                            return round(float(val.iloc[0]), 2)
+                val = _extract_latest_naaim_from_df(tbl)
+                if val is not None:
+                    print(f"NAAIM from HTML table: {val}")
+                    return val
         except ValueError:
             pass
 
-        text = BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
-        for pat in [
-            r"NAAIM\s+Exposure\s+Index[^0-9]{0,40}(\d{1,3}\.\d{1,2})",
-            r"Current\s+Value[^0-9]{0,20}(\d{1,3}\.\d{1,2})",
-        ]:
-            m = re.search(pat, text, re.IGNORECASE)
-            if m:
-                return round(float(m.group(1)), 2)
+        # 3) 正则兜底：匹配页面中最新的 "MM/DD/YYYY 数值"
+        text = soup.get_text(" ", strip=True)
+        matches = re.findall(r"(\d{2}/\d{2}/\d{4})\s+(-?\d{1,3}\.\d{1,2})", text)
+        parsed = []
+        for dt_str, val_str in matches:
+            try:
+                dt = datetime.strptime(dt_str, "%m/%d/%Y")
+                v = float(val_str)
+                if -200 <= v <= 200:
+                    parsed.append((dt, v))
+            except ValueError:
+                continue
+        if parsed:
+            parsed.sort(key=lambda x: x[0])
+            val = round(parsed[-1][1], 2)
+            print(f"NAAIM from regex: {val}")
+            return val
     except Exception as e:
         print(f"NAAIM fetch failed: {e}")
     return None
 
 
 def fetch_put_call():
-    """优先拉取 CBOE 公开 Equity Put/Call CSV，失败再尝试 YCharts"""
-    cboe_urls = [
-        "https://cdn.cboe.com/resources/options/volume_and_call_put_ratios/equitypc.csv",
-        "https://cdn.cboe.com/resources/options/volume_and_call_put_ratios/totalpc.csv",
-    ]
-    for url in cboe_urls:
-        try:
-            r = requests.get(url, headers=HEADERS, timeout=15)
-            r.raise_for_status()
-            df = pd.read_csv(io.StringIO(r.text), skiprows=2)
-            ratio_cols = [c for c in df.columns if "p/c" in str(c).lower() or "ratio" in str(c).lower()]
-            if ratio_cols:
-                vals = pd.to_numeric(df[ratio_cols[-1]], errors="coerce").dropna()
-                if len(vals) >= 10:
-                    return round(float(vals.tail(10).mean()), 2)
-                if not vals.empty:
-                    return round(float(vals.iloc[-1]), 2)
-        except Exception as e:
-            print(f"CBOE CSV ({url}) failed: {e}")
+    """直接抓取 CBOE 官方每日 JSON 接口，回溯最近 10 个交易日计算真实 Equity Put/Call 10D 均值"""
+    vals = []
+    today = datetime.now(timezone.utc).date()
 
+    for offset in range(0, 25):
+        if len(vals) >= 10:
+            break
+        d = today - timedelta(days=offset)
+        if d.weekday() >= 5:
+            continue
+        url = f"https://cdn.cboe.com/data/us/options/market_statistics/daily/{d.strftime('%Y-%m-%d')}_daily_options"
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=10)
+            if r.status_code != 200:
+                continue
+            payload = r.json()
+            for item in payload.get("ratios", []):
+                name = str(item.get("name", "")).upper()
+                if "EQUITY" in name and "PUT/CALL" in name:
+                    v = float(item["value"])
+                    if 0.1 < v < 3.0:
+                        vals.append(v)
+                    break
+        except Exception:
+            continue
+
+    if vals:
+        avg_val = round(sum(vals) / len(vals), 2)
+        print(f"CBOE Equity Put/Call ({len(vals)}D avg): {avg_val}")
+        return avg_val
+
+    # 备用：YCharts（兼容带逗号与不带逗号的日期格式）
     try:
         r = requests.get("https://ycharts.com/indicators/cboe_equity_put_call_ratio", headers=HEADERS, timeout=15)
         r.raise_for_status()
         text = BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
-        m = re.search(r"(\d\.\d{2})\s+for\s+[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}", text)
+        m = re.search(r"(\d\.\d{2})\s+for\s+[A-Z][a-z]{2}\s+\d{1,2},?\s+\d{4}", text)
         if m:
-            return round(float(m.group(1)), 2)
+            val = round(float(m.group(1)), 2)
+            print(f"YCharts Put/Call: {val}")
+            return val
     except Exception as e:
         print(f"YCharts Put/Call failed: {e}")
     return None
@@ -201,7 +262,6 @@ def fetch_put_call():
 def fetch_polymarket_fed():
     """从 Polymarket Gamma API 自动抓取下一次未结算 FOMC 会议的加/降息市场概率"""
     candidates = []
-    # 1) 全文搜索最新活跃的 Fed decision 事件
     try:
         r = requests.get(
             "https://gamma-api.polymarket.com/public-search",
@@ -216,7 +276,6 @@ def fetch_polymarket_fed():
     except Exception as e:
         print(f"Polymarket public-search failed: {e}")
 
-    # 2) 备用：按 24h 交易量拉取活跃事件筛选
     if not candidates:
         try:
             r = requests.get(
@@ -273,12 +332,10 @@ def fetch_polymarket_fed():
     if not valid_events:
         return None
 
-    # 锁定距离当前最近的一场未结算议息会议
     valid_events.sort(key=lambda x: x[0])
     _, target_ev = valid_events[0]
 
     markets = target_ev.get("markets") or []
-    # 如果搜索结果未带完整盘口，用 slug 再补拉一次详情
     if (not markets or "outcomePrices" not in markets[0]) and target_ev.get("slug"):
         try:
             r = requests.get(
@@ -308,7 +365,6 @@ def fetch_polymarket_fed():
         if not raw_label:
             continue
 
-        # 优先取有效盘口中间价，否则解析 outcomePrices[0]
         prob = None
         try:
             bid = float(mkt.get("bestBid")) if mkt.get("bestBid") is not None else None
@@ -374,7 +430,6 @@ def fetch_polymarket_fed():
 
 
 def fetch_zq_implied_rate():
-    """抓取 CBOT 30天联邦基金利率期货 (ZQ=F) 隐含利率（作兜底参考）"""
     try:
         df = yf.Ticker("ZQ=F").history(period="5d")
         if not df.empty:
@@ -395,33 +450,35 @@ def main():
     data["updated_at"] = now_str
 
     # 1. 标普 500 及 50/200 日均线
-    spx = fetch_yf_history("^GSPC", period="1y")
+    spx = fetch_yf_raw("^GSPC", period="1y")
     if not spx.empty:
         spx["MA50"] = spx["Close"].rolling(50).mean()
         spx["MA200"] = spx["Close"].rolling(200).mean()
         recent = spx.tail(15)
         latest = spx.iloc[-1]
         data["spx"] = {
-            "dates": recent.index.tolist(),
+            "dates": recent.index.strftime("%m/%d").tolist(),
             "close": [round(x, 2) for x in recent["Close"].tolist()],
             "ma50": round(float(latest["MA50"]), 2) if pd.notna(latest["MA50"]) else None,
             "ma200": round(float(latest["MA200"]), 2) if pd.notna(latest["MA200"]) else None,
             "latest": round(float(latest["Close"]), 2),
         }
 
-    # 2. 费城半导体 SOX 及真实 SOX/SPX 50 日均值
-    sox = fetch_yf_history("^SOX", period="1y")
+    # 2. 费城半导体 SOX 及真实 SOX/SPX 50 日均值（按完整年月日对齐）
+    sox = fetch_yf_raw("^SOX", period="1y")
     if not sox.empty and not spx.empty:
-        sox_aligned = sox["Close"]
-        spx_aligned = spx["Close"].reindex(sox_aligned.index).ffill()
-        ratio_series = sox_aligned / spx_aligned
+        aligned = pd.concat(
+            [sox["Close"].rename("sox"), spx["Close"].rename("spx")],
+            axis=1,
+        ).dropna()
+        ratio_series = aligned["sox"] / aligned["spx"]
         ratio_50ma = ratio_series.rolling(50).mean().iloc[-1]
 
         recent_sox = sox.tail(15)
         sox_latest = float(sox["Close"].iloc[-1])
         spx_latest = float(spx["Close"].iloc[-1])
         data["sox"] = {
-            "dates": recent_sox.index.tolist(),
+            "dates": recent_sox.index.strftime("%m/%d").tolist(),
             "close": [round(x, 2) for x in recent_sox["Close"].tolist()],
             "latest": round(sox_latest, 2),
             "sox_spx_ratio": round(sox_latest / spx_latest, 3),
@@ -432,7 +489,7 @@ def main():
     vix_map = {"VIX1D": "^VIX1D", "VIX9D": "^VIX9D", "VIX": "^VIX", "VIX3M": "^VIX3M"}
     vix_vals = {}
     for label, sym in vix_map.items():
-        df = fetch_yf_history(sym, period="5d")
+        df = fetch_yf_raw(sym, period="5d")
         if not df.empty:
             vix_vals[label] = round(float(df["Close"].iloc[-1]), 2)
     if "VIX" in vix_vals and "VIX3M" in vix_vals and vix_vals["VIX3M"] > 0:
@@ -485,7 +542,7 @@ def main():
                 "diff_bps": diff_bps,
             }
 
-    # 6. Polymarket 美联储议息概率（自动匹配下一场 FOMC）
+    # 6. Polymarket 美联储议息概率
     poly_fed = fetch_polymarket_fed()
     if poly_fed is not None:
         data["polymarket_fed"] = poly_fed
