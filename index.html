@@ -9,7 +9,7 @@
   <style>
     body { background-color: #090d16; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
     .card { background: linear-gradient(180deg, #111827 0%, #0d1321 100%); border: 1px solid #1e293b; border-radius: 0.75rem; }
-    .sub-card { background-color: rgba(15, 23, 42, 0.75); border: 1px solid rgba(51, 65, 85, 0.65); border-radius: 0.5rem; }
+    .sub-card { background-color: rgba(15, 23, 42, 0.78); border: 1px solid rgba(51, 65, 85, 0.65); border-radius: 0.5rem; }
   </style>
 </head>
 <body class="min-h-screen antialiased pb-12">
@@ -25,40 +25,123 @@
       </div>
       <div class="flex items-center gap-3">
         <span id="data-status" class="text-xs px-2.5 py-1 rounded-md bg-slate-800/90 border border-slate-700 text-slate-300">数据加载中...</span>
-        <button onclick="loadMarketData()" class="text-xs px-3 py-1.5 rounded-md bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 transition">刷新数据</button>
+        <button id="refresh-btn" onclick="loadMarketData(true)" class="text-xs px-3 py-1.5 rounded-md bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 transition">刷新数据</button>
       </div>
     </div>
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
 
-    <!-- 第一层：顶部 3 列全自动联动结论区 -->
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div id="card-01" class="card p-5 border-t-2 border-t-amber-400">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-medium tracking-wider text-slate-400">01 · 超买 / 超卖</span>
-          <span id="card-01-badge" class="text-[11px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">技术水位</span>
+    <!-- 第一层：顶部 3 列全自动联动结论区 + 四维打分明细 -->
+    <section class="space-y-3.5">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <!-- 卡片 01 -->
+        <div id="card-01" class="card p-5 border-t-2 border-t-amber-400 flex flex-col justify-between gap-4">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-xs font-medium tracking-wider text-slate-400">01 · 超买 / 超卖</span>
+              <span id="card-01-badge" class="text-[11px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">技术水位</span>
+            </div>
+            <div id="card-01-title" class="text-2xl font-bold text-amber-400 mb-2">计算中...</div>
+            <p id="card-01-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed"></p>
+          </div>
+          <div class="sub-card p-3.5 space-y-2">
+            <div class="flex items-center justify-between text-[13px]">
+              <span class="font-medium text-slate-200">趋势与广度 <span class="text-xs text-slate-400 font-normal">· 权重 25%</span></span>
+              <span id="dim-trend-raw" class="font-mono font-semibold text-amber-300">-- 分</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="dim-trend-bar" class="h-full bg-gradient-to-r from-amber-500 to-amber-300 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span>SPX 均线 + $S5FI + SOX/SPX</span>
+              <span id="dim-trend-weighted" class="font-mono font-semibold text-amber-300">实得 -- 分</span>
+            </div>
+          </div>
         </div>
-        <div id="card-01-title" class="text-2xl font-bold text-amber-400 mb-2">计算中...</div>
-        <p id="card-01-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed"></p>
+
+        <!-- 卡片 02 -->
+        <div id="card-02" class="card p-5 border-t-2 border-t-rose-500 flex flex-col justify-between gap-4">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-xs font-medium tracking-wider text-slate-400">02 · 市场情绪</span>
+              <span id="card-02-badge" class="text-[11px] px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">逆向温度</span>
+            </div>
+            <div id="card-02-title" class="text-2xl font-bold text-rose-400 mb-2">计算中...</div>
+            <p id="card-02-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed"></p>
+          </div>
+          <div class="sub-card p-3.5 space-y-3">
+            <!-- 维度：逆向情绪与仓位 -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-[13px]">
+                <span class="font-medium text-slate-200">逆向情绪与仓位 <span class="text-xs text-slate-400 font-normal">· 权重 35%</span></span>
+                <span id="dim-sentiment-raw" class="font-mono font-semibold text-rose-400">-- 分</span>
+              </div>
+              <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div id="dim-sentiment-bar" class="h-full bg-gradient-to-r from-rose-500 to-rose-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <div class="flex justify-end text-xs">
+                <span id="dim-sentiment-weighted" class="font-mono font-semibold text-rose-300">实得 -- 分</span>
+              </div>
+            </div>
+            <!-- 维度：波动率结构 -->
+            <div class="space-y-1.5 pt-2 border-t border-slate-700/60">
+              <div class="flex items-center justify-between text-[13px]">
+                <span class="font-medium text-slate-200">波动率结构 <span class="text-xs text-slate-400 font-normal">· 权重 20%</span></span>
+                <span id="dim-vix-raw" class="font-mono font-semibold text-sky-300">-- 分</span>
+              </div>
+              <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div id="dim-vix-bar" class="h-full bg-gradient-to-r from-sky-500 to-sky-300 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <div class="flex justify-end text-xs">
+                <span id="dim-vix-weighted" class="font-mono font-semibold text-sky-300">实得 -- 分</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 03 -->
+        <div id="card-03" class="card p-5 border-t-2 border-t-emerald-400 flex flex-col justify-between gap-4">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-xs font-medium tracking-wider text-slate-400">03 · 个人动作建议</span>
+              <span id="card-03-score" class="text-sm font-mono font-bold text-emerald-400 shrink-0">综合得分 -- 分</span>
+            </div>
+            <div id="card-03-title" class="text-2xl font-bold text-emerald-400 mb-2">计算中...</div>
+            <p id="card-03-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed"></p>
+          </div>
+          <div class="sub-card p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between text-[13px]">
+              <span class="font-medium text-slate-200">信用与宏观 <span class="text-xs text-slate-400 font-normal">· 权重 20%</span></span>
+              <span id="dim-credit-raw" class="font-mono font-semibold text-emerald-400">-- 分</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="dim-credit-bar" class="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <div class="flex items-center justify-between text-xs pt-0.5">
+              <span id="dim-credit-veto" class="font-medium text-emerald-400">✓ 信用安全</span>
+              <span id="dim-credit-weighted" class="font-mono font-semibold text-emerald-300">实得 -- 分</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div id="card-02" class="card p-5 border-t-2 border-t-rose-500">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-medium tracking-wider text-slate-400">02 · 市场情绪</span>
-          <span id="card-02-badge" class="text-[11px] px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">逆向温度</span>
+      <!-- 底部通栏：四维加权总分明细条 -->
+      <div id="score-summary-bar" class="card px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm sm:text-base text-slate-200">
+          <span class="font-bold text-white tracking-wide">【加权总分】</span>
+          <span class="font-mono font-bold text-rose-400" id="sum-sentiment">--</span><span class="text-xs text-slate-400">(情绪)</span>
+          <span class="text-slate-500">+</span>
+          <span class="font-mono font-bold text-amber-400" id="sum-trend">--</span><span class="text-xs text-slate-400">(趋势)</span>
+          <span class="text-slate-500">+</span>
+          <span class="font-mono font-bold text-sky-400" id="sum-vix">--</span><span class="text-xs text-slate-400">(波动率)</span>
+          <span class="text-slate-500">+</span>
+          <span class="font-mono font-bold text-emerald-400" id="sum-credit">--</span><span class="text-xs text-slate-400">(信用)</span>
+          <span class="text-slate-400 font-bold">=</span>
+          <span id="sum-total" class="text-lg sm:text-xl font-mono font-extrabold text-emerald-400">-- 分</span>
         </div>
-        <div id="card-02-title" class="text-2xl font-bold text-rose-400 mb-2">计算中...</div>
-        <p id="card-02-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed"></p>
-      </div>
-
-      <div id="card-03" class="card p-5 border-t-2 border-t-emerald-400">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-medium tracking-wider text-slate-400">03 · 个人动作建议</span>
-          <span id="card-03-badge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">综合分 --</span>
-        </div>
-        <div id="card-03-title" class="text-2xl font-bold text-emerald-400 mb-2">计算中...</div>
-        <p id="card-03-desc" class="text-xs sm:text-[13px] text-slate-300 leading-relaxed"></p>
+        <div id="sum-veto-status" class="text-xs sm:text-sm font-medium text-emerald-400">✓ 信用未否决</div>
       </div>
     </section>
 
@@ -76,10 +159,10 @@
         <div class="sub-card p-3 mt-3 min-h-[76px] flex flex-col justify-center">
           <div class="flex items-center justify-between text-xs mb-1.5">
             <span class="text-slate-300 font-medium">标普 500 站上 50 日线占比 ($S5FI)</span>
-            <span id="s5fi-val" class="font-mono font-bold text-sky-400">55.06%</span>
+            <span id="s5fi-val" class="font-mono font-bold text-sky-400">--</span>
           </div>
           <div class="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-            <div id="s5fi-bar" class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-rose-400 rounded-full" style="width: 55.06%"></div>
+            <div id="s5fi-bar" class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-rose-400 rounded-full" style="width: 50%"></div>
             <div class="absolute top-0 bottom-0 left-[20%] w-0.5 bg-emerald-300/90"></div>
             <div class="absolute top-0 bottom-0 left-[85%] w-0.5 bg-rose-400/90"></div>
           </div>
@@ -123,12 +206,12 @@
         </div>
         <div class="sub-card p-3 mt-3 min-h-[76px] grid grid-cols-2 gap-2 items-center">
           <div class="border-r border-slate-700/70 pr-2">
-            <div class="text-[11px] text-slate-400">甲骨文 (ORCL) 5Y CDS</div>
-            <div class="text-xs font-mono font-semibold text-sky-300 mt-0.5">~145 bps <span class="text-[10px] text-slate-400 font-sans">可控</span></div>
+            <div class="text-[11px] text-slate-400">投资级债利差 (IG OAS)</div>
+            <div id="ig-oas-val" class="text-xs font-mono font-semibold text-sky-300 mt-0.5">-- bps</div>
           </div>
           <div class="pl-1">
-            <div class="text-[11px] text-slate-400">CoreWeave 5Y CDS</div>
-            <div class="text-xs font-mono font-semibold text-rose-400 mt-0.5">1,314 bps <span class="text-[10px] text-rose-300 font-sans">局部高危</span></div>
+            <div class="text-[11px] text-slate-400">CCC 垃圾债利差 (尾部)</div>
+            <div id="ccc-oas-val" class="text-xs font-mono font-semibold text-amber-300 mt-0.5">-- bps</div>
           </div>
         </div>
       </div>
@@ -150,7 +233,7 @@
           <div>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-semibold text-white">AAII 散户情绪（周度逆向指标）</h3>
-              <span id="aaii-badge" class="text-xs font-mono"><span class="text-rose-400">多 37.1%</span> / <span class="text-emerald-400">空 45.4%</span></span>
+              <span id="aaii-badge" class="text-xs font-mono">--</span>
             </div>
             <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">红线看多、绿线看空。看空 &gt; 45% 或看多 &lt; 25% 时，往往暗示散户割肉接近尾声。</p>
             <div id="chart-aaii" class="w-full h-44 mt-2"></div>
@@ -186,24 +269,24 @@
               <h3 class="text-sm font-semibold text-white">利率与美联储路径 · 2Y vs 10Y 美债</h3>
               <span id="rates-badge" class="text-xs font-mono text-sky-300">--</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">10 年期决定成长股估值锚，2 年期反映加息预期；实际利率回落利好科技股。</p>
+            <p class="text-xs sm:text-[13px] text-slate-300 leading-relaxed mt-1">10 年期决定成长股估值锚，2 年期反映利率路径预期；实际利率回落利好科技股。</p>
             <div id="chart-rates" class="w-full h-48 mt-2"></div>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-3">
             <div class="sub-card p-2.5">
               <div class="text-[11px] text-slate-400">2s10s 期限利差</div>
               <div id="spread-2s10s" class="text-xs sm:text-sm font-mono font-semibold text-slate-200 mt-0.5">--</div>
-              <div class="text-[10px] text-slate-400">正斜率未倒挂</div>
+              <div id="spread-desc" class="text-[10px] text-slate-400">期限斜率</div>
             </div>
             <div class="sub-card p-2.5">
               <div class="text-[11px] text-slate-400">10Y 实际利率 (TIPS)</div>
               <div id="tips-10y" class="text-xs sm:text-sm font-mono font-semibold text-sky-300 mt-0.5">--</div>
               <div class="text-[10px] text-slate-400">成长股估值锚</div>
             </div>
-            <div class="sub-card p-2.5 border-rose-500/40 bg-rose-950/20">
-              <div class="text-[11px] text-rose-300">FedWatch (12/9)</div>
-              <div class="text-xs sm:text-sm font-mono font-bold text-rose-400 mt-0.5">加息25bp · 99.4%</div>
-              <div class="text-[10px] text-rose-300/80">→ 4.00–4.25%</div>
+            <div class="sub-card p-2.5">
+              <div class="text-[11px] text-slate-400">政策利率 (EFFR)</div>
+              <div id="fed-effr-val" class="text-xs sm:text-sm font-mono font-semibold text-amber-300 mt-0.5">--</div>
+              <div id="fed-implied-desc" class="text-[10px] text-slate-400">市场隐含路径</div>
             </div>
           </div>
         </div>
@@ -222,16 +305,16 @@
             <div class="sub-card p-2.5">
               <div class="text-[11px] text-slate-400">SOX / SPX 比值</div>
               <div id="sox-spx-val" class="text-xs sm:text-sm font-mono font-semibold text-emerald-400 mt-0.5">--</div>
-              <div class="text-[10px] text-slate-400">50日均值 1.185</div>
+              <div id="sox-spx-ma" class="text-[10px] text-slate-400">50日均值 --</div>
             </div>
             <div class="sub-card p-2.5">
               <div class="text-[11px] text-slate-400">Put / Call (10D)</div>
-              <div id="put-call-val" class="text-xs sm:text-sm font-mono font-semibold text-slate-200 mt-0.5">0.71</div>
+              <div id="put-call-val" class="text-xs sm:text-sm font-mono font-semibold text-slate-200 mt-0.5">--</div>
               <div class="text-[10px] text-slate-400">&lt;0.5贪婪 · &gt;1.0恐慌</div>
             </div>
             <div class="sub-card p-2.5">
               <div class="text-[11px] text-slate-400">NAAIM 机构仓位</div>
-              <div id="naaim-val" class="text-xs sm:text-sm font-mono font-semibold text-amber-300 mt-0.5">51.2</div>
+              <div id="naaim-val" class="text-xs sm:text-sm font-mono font-semibold text-amber-300 mt-0.5">--</div>
               <div class="text-[10px] text-slate-400">&lt;30清仓 · &gt;100过热</div>
             </div>
           </div>
@@ -242,7 +325,7 @@
 
   <script>
     const FALLBACK_DATA = {
-      updated_at: "2026-11-25 收盘快照",
+      updated_at: "兜底快照",
       spx: { dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"], close: [7540,7495,7420,7365,7280,7115,7145,7120,7182.78], ma50: 7602, ma200: 7350, latest: 7182.78 },
       s5fi: 55.06,
       cnn: 15,
@@ -252,7 +335,7 @@
       aaii: { dates: ["11/05","11/12","11/19","11/25"], bull: [41.2,38.5,34.8,37.1], bear: [42.1,43.8,46.9,45.4], neutral: [16.7,17.7,18.3,17.5] },
       vix_term: { VIX1D: 24.8, VIX9D: 28.4, VIX: 27.6, VIX3M: 26.8, ratio: 1.03 },
       rates: { dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"], y10: [5.15,5.12,5.08,5.04,4.99,4.94,4.91,4.88,4.85], y2: [4.88,4.86,4.82,4.78,4.74,4.70,4.67,4.64,4.61], spread_2s10s: 0.24, tips10: 2.38 },
-      sox: { dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"], close: [9620,9480,9310,9150,8920,8640,8690,8685,8777.4], latest: 8777.4, sox_spx_ratio: 1.222 }
+      sox: { dates: ["11/13","11/14","11/17","11/18","11/19","11/20","11/21","11/24","11/25"], close: [9620,9480,9310,9150,8920,8640,8690,8685,8777.4], latest: 8777.4, sox_spx_ratio: 1.222, sox_spx_50ma: 1.185 }
     };
 
     const charts = {};
@@ -261,17 +344,21 @@
     const sparseFmt = (total, step, fn) => (p) => (p.dataIndex === total - 1 || (total - 1 - p.dataIndex) % step === 0) ? fn(p.value) : "";
 
     const THEME = {
-      emerald: { border: "border-t-emerald-400", badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", title: "text-emerald-400" },
-      amber:   { border: "border-t-amber-400",   badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",       title: "text-amber-400" },
-      rose:    { border: "border-t-rose-500",    badge: "bg-rose-500/15 text-rose-300 border-rose-500/30",          title: "text-rose-400" },
-      sky:     { border: "border-t-sky-400",     badge: "bg-sky-500/15 text-sky-300 border-sky-500/30",             title: "text-sky-400" }
+      emerald: { border: "border-t-emerald-400", badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", title: "text-emerald-400", text: "text-emerald-400" },
+      amber:   { border: "border-t-amber-400",   badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",       title: "text-amber-400",   text: "text-amber-400" },
+      rose:    { border: "border-t-rose-500",    badge: "bg-rose-500/15 text-rose-300 border-rose-500/30",          title: "text-rose-400",    text: "text-rose-400" },
+      sky:     { border: "border-t-sky-400",     badge: "bg-sky-500/15 text-sky-300 border-sky-500/30",             title: "text-sky-400",     text: "text-sky-400" }
     };
 
-    function setCardStyle(prefix, themeKey, badgeText, titleText, descText) {
+    function setCardStyle(prefix, themeKey, badgeText, titleText, descText, isPlainBadge = false) {
       const t = THEME[themeKey];
-      document.getElementById(prefix).className = `card p-5 border-t-2 ${t.border}`;
-      const b = document.getElementById(`${prefix}-badge`);
-      b.className = `text-[11px] font-mono px-2 py-0.5 rounded border ${t.badge}`;
+      document.getElementById(prefix).className = `card p-5 border-t-2 ${t.border} flex flex-col justify-between gap-4`;
+      const b = document.getElementById(isPlainBadge ? `${prefix}-score` : `${prefix}-badge`);
+      if (isPlainBadge) {
+        b.className = `text-sm font-mono font-bold shrink-0 ${t.text}`;
+      } else {
+        b.className = `text-[11px] font-mono px-2 py-0.5 rounded border shrink-0 ${t.badge}`;
+      }
       b.textContent = badgeText;
       const ti = document.getElementById(`${prefix}-title`);
       ti.className = `text-2xl font-bold mb-2 ${t.title}`;
@@ -279,17 +366,17 @@
       document.getElementById(`${prefix}-desc`).textContent = descText;
     }
 
-    // 核心联动引擎：四维加权打分 + 信用一票否决
     function updateTopCards(d) {
       const spx = d.spx.latest, ma50 = d.spx.ma50, ma200 = d.spx.ma200;
-      const s5fi = d.s5fi ?? FALLBACK_DATA.s5fi;
-      const cnn = d.cnn ?? FALLBACK_DATA.cnn;
+      const s5fi = typeof d.s5fi === "number" ? d.s5fi : FALLBACK_DATA.s5fi;
+      const cnn = typeof d.cnn === "number" ? d.cnn : FALLBACK_DATA.cnn;
       const aaiiBull = d.aaii.bull[d.aaii.bull.length - 1];
       const aaiiBear = d.aaii.bear[d.aaii.bear.length - 1];
-      const naaim = d.naaim ?? FALLBACK_DATA.naaim;
+      const naaim = typeof d.naaim === "number" ? d.naaim : FALLBACK_DATA.naaim;
       const hy = d.hy_oas.latest;
       const vixRatio = d.vix_term.ratio ?? 1.0;
       const soxRatio = d.sox.sox_spx_ratio ?? 1.2;
+      const sox50ma = d.sox.sox_spx_50ma ?? 1.185;
       const tips10 = d.rates.tips10 ?? 2.5;
 
       // === 卡片 01：超买 / 超卖 ===
@@ -319,25 +406,24 @@
       const c2Desc = `CNN 恐慌贪婪指数报 ${cnn}（${cnnLabel}），AAII 散户看空比例 ${aaiiBear.toFixed(1)}%（看多 ${aaiiBull.toFixed(1)}%），NAAIM 机构仓位 ${naaim.toFixed(1)}。${cnn <= 25 ? "恐慌情绪已接近阶段性冰点。" : cnn >= 75 ? "市场一致看多，逆向赔率下降。" : "情绪尚未出现极端反转信号。"}`;
       setCardStyle("card-02", c2Theme, "逆向温度", c2Title, c2Desc);
 
-      // 同步更新 CNN 右上角标签
       const cnnBadge = document.getElementById("cnn-badge");
       cnnBadge.textContent = `${cnn} · ${cnnLabel}`;
       cnnBadge.className = "text-xs font-mono font-semibold " + (cnn <= 25 || cnn >= 75 ? "text-rose-400" : cnn <= 45 ? "text-amber-300" : "text-emerald-400");
 
-      // === 卡片 03：四维加权打分 + 信用一票否决 ===
+      // === 四维加权打分引擎 ===
       // 1) 逆向情绪与仓位 (35%)
       const sCnn = cnn <= 25 ? 90 : cnn <= 45 ? 72 : cnn <= 55 ? 50 : cnn <= 75 ? 32 : 12;
       const sAaii = aaiiBear >= 45 ? 85 : aaiiBear >= 35 ? 65 : aaiiBear >= 25 ? 45 : 25;
       const sNaaim = naaim <= 45 ? 85 : naaim <= 65 ? 70 : naaim <= 85 ? 45 : 20;
-      const scoreSentiment = (sCnn * 0.5 + sAaii * 0.25 + sNaaim * 0.25);
+      const scoreSentiment = Math.round(sCnn * 0.5 + sAaii * 0.25 + sNaaim * 0.25);
 
       // 2) 趋势与市场广度 (25%)
       let scoreTrend = 55;
-      if (spx < ma50 && s5fi >= 45) scoreTrend = 72; // 权重回调但广度未崩
+      if (spx < ma50 && s5fi >= 45) scoreTrend = 72;
       else if (spx > ma50 && spx > ma200 && s5fi <= 80) scoreTrend = 68;
-      else if (spx > ma50 && s5fi > 85) scoreTrend = 28; // 过热
-      else if (spx < ma200 && s5fi < 30) scoreTrend = 40; // 弱势
-      if (soxRatio >= 1.185) scoreTrend = Math.min(100, scoreTrend + 6);
+      else if (spx > ma50 && s5fi > 85) scoreTrend = 28;
+      else if (spx < ma200 && s5fi < 30) scoreTrend = 40;
+      if (soxRatio >= sox50ma) scoreTrend = Math.min(100, scoreTrend + 6);
 
       // 3) 波动率结构 (20%)
       const scoreVix = vixRatio > 1.08 ? 45 : vixRatio > 1.0 ? 68 : vixRatio >= 0.92 ? 65 : 55;
@@ -346,33 +432,75 @@
       let scoreCredit = hy < 3.5 ? 90 : hy < 4.0 ? 80 : hy < 4.5 ? 60 : hy < 5.0 ? 35 : 0;
       if (tips10 > 2.5) scoreCredit = Math.max(0, scoreCredit - 6);
 
-      const totalScore = Math.round(scoreSentiment * 0.35 + scoreTrend * 0.25 + scoreVix * 0.20 + scoreCredit * 0.20);
+      const wSentiment = +(scoreSentiment * 0.35).toFixed(1);
+      const wTrend = +(scoreTrend * 0.25).toFixed(1);
+      const wVix = +(scoreVix * 0.20).toFixed(1);
+      const wCredit = +(scoreCredit * 0.20).toFixed(1);
+      const totalScore = Math.round(wSentiment + wTrend + wVix + wCredit);
+      const isVeto = hy >= 5.0;
 
-      if (hy >= 5.0) {
-        setCardStyle("card-03", "rose", "信用红线否决", "防御减仓 · 现金为王",
-          `高收益债利差已升至 ${hy.toFixed(2)}%（突破 5.0% 熊市红线），触发一票否决机制。无视短线超卖信号，优先压缩风险敞口、保留现金。`);
+      // 更新四维子板块明细
+      document.getElementById("dim-trend-raw").textContent = `${scoreTrend} 分`;
+      document.getElementById("dim-trend-bar").style.width = `${scoreTrend}%`;
+      document.getElementById("dim-trend-weighted").textContent = `实得 ${wTrend.toFixed(1)} 分`;
+
+      document.getElementById("dim-sentiment-raw").textContent = `${scoreSentiment} 分`;
+      document.getElementById("dim-sentiment-bar").style.width = `${scoreSentiment}%`;
+      document.getElementById("dim-sentiment-weighted").textContent = `实得 ${wSentiment.toFixed(1)} 分`;
+
+      document.getElementById("dim-vix-raw").textContent = `${scoreVix} 分`;
+      document.getElementById("dim-vix-bar").style.width = `${scoreVix}%`;
+      document.getElementById("dim-vix-weighted").textContent = `实得 ${wVix.toFixed(1)} 分`;
+
+      document.getElementById("dim-credit-raw").textContent = `${scoreCredit} 分`;
+      document.getElementById("dim-credit-bar").style.width = `${scoreCredit}%`;
+      document.getElementById("dim-credit-weighted").textContent = `实得 ${wCredit.toFixed(1)} 分`;
+
+      const vetoSmall = document.getElementById("dim-credit-veto");
+      vetoSmall.textContent = isVeto ? `✕ 触发红线 (${hy.toFixed(2)}% ≥ 5.0%)` : `✓ 信用未否决 (${hy.toFixed(2)}% < 5.0%)`;
+      vetoSmall.className = "font-medium " + (isVeto ? "text-rose-400" : "text-emerald-400");
+
+      // 更新底部通栏加权公式
+      document.getElementById("sum-sentiment").textContent = wSentiment.toFixed(1);
+      document.getElementById("sum-trend").textContent = wTrend.toFixed(1);
+      document.getElementById("sum-vix").textContent = wVix.toFixed(1);
+      document.getElementById("sum-credit").textContent = wCredit.toFixed(1);
+
+      const sumTotal = document.getElementById("sum-total");
+      sumTotal.textContent = `${totalScore} 分`;
+      sumTotal.className = "text-lg sm:text-xl font-mono font-extrabold " + (isVeto ? "text-rose-400" : totalScore >= 60 ? "text-emerald-400" : totalScore >= 40 ? "text-sky-400" : "text-amber-400");
+
+      const sumVeto = document.getElementById("sum-veto-status");
+      sumVeto.textContent = isVeto ? `✕ 信用红线否决（HY OAS ${hy.toFixed(2)}% ≥ 5.0%）` : `✓ 信用未否决（HY OAS ${hy.toFixed(2)}% < 5.0%）`;
+      sumVeto.className = "text-xs sm:text-sm font-medium " + (isVeto ? "text-rose-400" : "text-emerald-400");
+
+      // === 卡片 03：纯文字综合得分（无绿色遮挡框） ===
+      if (isVeto) {
+        setCardStyle("card-03", "rose", `综合得分 ${totalScore} 分（否决）`, "防御减仓 · 现金为王",
+          `高收益债利差已升至 ${hy.toFixed(2)}%（突破 5.0% 熊市红线），触发一票否决机制。无视短线超卖信号，优先压缩风险敞口、保留现金。`, true);
       } else if (totalScore >= 80) {
-        setCardStyle("card-03", "emerald", `综合分 ${totalScore} · 信用安全`, "左侧击球区 · 分批买回",
-          `HY OAS（${hy.toFixed(2)}%）安全，情绪与仓位进入冰点，VIX 比值 ${vixRatio.toFixed(2)}，SOX/SPX ${soxRatio.toFixed(3)}，赔率占优，可按计划左侧分批加仓。`);
+        setCardStyle("card-03", "emerald", `综合得分 ${totalScore} 分`, "左侧击球区 · 分批买回",
+          `HY OAS（${hy.toFixed(2)}%）安全，情绪与仓位进入冰点，VIX 比值 ${vixRatio.toFixed(2)}，SOX/SPX ${soxRatio.toFixed(3)}，赔率占优，可按计划左侧分批加仓。`, true);
       } else if (totalScore >= 60) {
-        setCardStyle("card-03", "emerald", `综合分 ${totalScore} · 信用未否决`, "持有 / 左侧观察买回",
-          `HY OAS（${hy.toFixed(2)}%）远低于 5.0% 红线，VIX 比值 ${vixRatio.toFixed(2)}，TIPS 实际利率 ${tips10.toFixed(2)}%。建议拿稳底仓、逢低分批观察，勿盲目追高。`);
+        setCardStyle("card-03", "emerald", `综合得分 ${totalScore} 分`, "持有 / 左侧观察买回",
+          `HY OAS（${hy.toFixed(2)}%）远低于 5.0% 红线，VIX 比值 ${vixRatio.toFixed(2)}，TIPS 实际利率 ${tips10.toFixed(2)}%。建议拿稳底仓、逢低分批观察，勿盲目追高。`, true);
       } else if (totalScore >= 40) {
-        setCardStyle("card-03", "sky", `综合分 ${totalScore} · 信用未否决`, "中性持有 · 按纪律观望",
-          `当前情绪、趋势与波动率信号相对均衡（HY OAS ${hy.toFixed(2)}%，VIX 比值 ${vixRatio.toFixed(2)}），保持现有底仓，等待更明确的极值信号再动作。`);
+        setCardStyle("card-03", "sky", `综合得分 ${totalScore} 分`, "中性持有 · 按纪律观望",
+          `当前情绪、趋势与波动率信号相对均衡（HY OAS ${hy.toFixed(2)}%，VIX 比值 ${vixRatio.toFixed(2)}），保持现有底仓，等待更明确的极值信号再动作。`, true);
       } else if (totalScore >= 20) {
-        setCardStyle("card-03", "amber", `综合分 ${totalScore} · 偏热警示`, "情绪偏热 · 逢高分批止盈",
-          `情绪与仓位趋于拥挤，短线赔率下降（HY OAS ${hy.toFixed(2)}%，TIPS ${tips10.toFixed(2)}%），建议逐步兑现浮盈、上移止损，不追高。`);
+        setCardStyle("card-03", "amber", `综合得分 ${totalScore} 分`, "情绪偏热 · 逢高分批止盈",
+          `情绪与仓位趋于拥挤，短线赔率下降（HY OAS ${hy.toFixed(2)}%，TIPS ${tips10.toFixed(2)}%），建议逐步兑现浮盈、上移止损，不追高。`, true);
       } else {
-        setCardStyle("card-03", "rose", `综合分 ${totalScore} · 高危过热`, "极端过热 · 严控回撤",
-          `多项指标共振进入过热区，安全边际极低，停止新开多仓，主动收缩仓位防范回撤。`);
+        setCardStyle("card-03", "rose", `综合得分 ${totalScore} 分`, "极端过热 · 严控回撤",
+          `多项指标共振进入过热区，安全边际极低，停止新开多仓，主动收缩仓位防范回撤。`, true);
       }
     }
 
     function renderAll(d) {
-      document.getElementById("data-status").textContent = "数据更新：" + (d.updated_at || "2026-11-25");
+      document.getElementById("data-status").textContent = "数据更新：" + (d.updated_at || "未知");
       if (d.spx) document.getElementById("spx-badge").textContent = d.spx.latest.toLocaleString();
-      const s5fi = d.s5fi ?? FALLBACK_DATA.s5fi;
+
+      const s5fi = typeof d.s5fi === "number" ? d.s5fi : FALLBACK_DATA.s5fi;
       document.getElementById("s5fi-val").textContent = s5fi.toFixed(2) + "%";
       document.getElementById("s5fi-bar").style.width = Math.min(100, Math.max(0, s5fi)) + "%";
 
@@ -381,29 +509,59 @@
         el.textContent = hy.toFixed(2) + "% · " + (hy >= 5.0 ? "熊市警戒" : "安全");
         el.className = "text-xs font-mono font-semibold " + (hy >= 5.0 ? "text-rose-400" : "text-emerald-400");
       }
+
+      // 真实 FRED 分级信用利差
+      const igBps = d.credit_detail?.ig_oas_bps;
+      const cccBps = d.credit_detail?.ccc_oas_bps;
+      document.getElementById("ig-oas-val").innerHTML = igBps != null
+        ? `${igBps} bps <span class="text-[10px] text-slate-400 font-sans">${igBps < 130 ? "宽松" : "偏紧"}</span>`
+        : `<span class="text-slate-400">待下次更新</span>`;
+      document.getElementById("ccc-oas-val").innerHTML = cccBps != null
+        ? `${cccBps.toLocaleString()} bps <span class="text-[10px] ${cccBps >= 1000 ? "text-rose-300" : "text-slate-400"} font-sans">${cccBps >= 1000 ? "高危" : "可控"}</span>`
+        : `<span class="text-slate-400">待下次更新</span>`;
+
       if (d.rates) {
         const y10 = d.rates.y10[d.rates.y10.length - 1], y2 = d.rates.y2[d.rates.y2.length - 1];
         document.getElementById("rates-badge").textContent = `10Y ${y10.toFixed(2)}% · 2Y ${y2.toFixed(2)}%`;
         document.getElementById("spread-2s10s").textContent = (d.rates.spread_2s10s >= 0 ? "+" : "") + d.rates.spread_2s10s.toFixed(2) + "%";
-        if (d.rates.tips10) document.getElementById("tips-10y").textContent = d.rates.tips10.toFixed(2) + "%";
+        document.getElementById("spread-desc").textContent = d.rates.spread_2s10s >= 0 ? "正斜率未倒挂" : "曲线倒挂警示";
+        if (d.rates.tips10 != null) document.getElementById("tips-10y").textContent = d.rates.tips10.toFixed(2) + "%";
       }
+
+      // 真实联邦基金利率与市场隐含路径
+      if (d.fed_policy) {
+        const fp = d.fed_policy;
+        document.getElementById("fed-effr-val").textContent = fp.effr.toFixed(2) + "%";
+        const sign = fp.diff_bps > 0 ? "+" : "";
+        const dirText = fp.diff_bps >= 15 ? "定价偏紧" : fp.diff_bps <= -15 ? "定价降息" : "定价维稳";
+        document.getElementById("fed-implied-desc").textContent = `${fp.source} ${sign}${fp.diff_bps}bp (${dirText})`;
+      } else {
+        document.getElementById("fed-effr-val").textContent = "待更新";
+        document.getElementById("fed-implied-desc").textContent = "等待下一次抓取";
+      }
+
       if (d.sox) {
         document.getElementById("sox-badge").textContent = d.sox.latest.toLocaleString();
         document.getElementById("sox-spx-val").textContent = d.sox.sox_spx_ratio.toFixed(3);
+        const maVal = d.sox.sox_spx_50ma != null ? d.sox.sox_spx_50ma.toFixed(3) : "--";
+        document.getElementById("sox-spx-ma").textContent = `50日均值 ${maVal}`;
       }
+
       if (d.aaii) {
         const b = d.aaii.bull[d.aaii.bull.length - 1], br = d.aaii.bear[d.aaii.bear.length - 1];
         document.getElementById("aaii-badge").innerHTML = `<span class="text-rose-400">多 ${b.toFixed(1)}%</span> / <span class="text-emerald-400">空 ${br.toFixed(1)}%</span>`;
       }
-      document.getElementById("put-call-val").textContent = (d.put_call ?? FALLBACK_DATA.put_call).toFixed(2);
-      document.getElementById("naaim-val").textContent = (d.naaim ?? FALLBACK_DATA.naaim).toFixed(1);
+
+      const pcVal = typeof d.put_call === "number" ? d.put_call : FALLBACK_DATA.put_call;
+      const naaimVal = typeof d.naaim === "number" ? d.naaim : FALLBACK_DATA.naaim;
+      document.getElementById("put-call-val").textContent = pcVal.toFixed(2);
+      document.getElementById("naaim-val").textContent = naaimVal.toFixed(1);
 
       if (d.vix_term && d.vix_term.ratio !== undefined) {
         const r = d.vix_term.ratio;
         document.getElementById("vix-ratio-badge").textContent = `VIX / VIX3M = ${r.toFixed(2)} · ${r > 1 ? "倒挂(急性恐慌)" : r === 1 ? "走平(警戒)" : "正挂(正常)"}`;
       }
 
-      // 更新顶部三张联动卡片
       updateTopCards(d);
 
       // 1. SPX
@@ -425,7 +583,7 @@
       });
 
       // 2. CNN 情绪仪表盘
-      const cnnVal = d.cnn ?? 15;
+      const cnnVal = typeof d.cnn === "number" ? d.cnn : 15;
       initChart("chart-cnn").setOption({
         backgroundColor: "transparent",
         series: [{
@@ -453,7 +611,7 @@
         }]
       });
 
-      // 4. AAII
+      // 4. AAII（红线看多、绿线看空）
       initChart("chart-aaii").setOption({
         backgroundColor: "transparent", tooltip: tip, legend: { top: 0, textStyle: { color: "#cbd5e1", fontSize: 11 } },
         grid: { left: 40, right: 24, top: 30, bottom: 24 },
@@ -537,13 +695,30 @@
       else { sec.classList.add("hidden"); btn.textContent = "展开深度指标"; }
     }
 
-    async function loadMarketData() {
+    async function loadMarketData(manual = false) {
+      const btn = document.getElementById("refresh-btn");
+      if (manual && btn) { btn.textContent = "刷新中..."; btn.disabled = true; }
       try {
-        const res = await fetch("./data.json?t=" + Date.now());
+        const res = await fetch("./data.json?t=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("No data.json");
         const remote = await res.json();
-        renderAll({ ...FALLBACK_DATA, ...remote, spx: remote.spx || FALLBACK_DATA.spx, hy_oas: remote.hy_oas || FALLBACK_DATA.hy_oas, vix_term: remote.vix_term || FALLBACK_DATA.vix_term, rates: remote.rates || FALLBACK_DATA.rates, sox: remote.sox || FALLBACK_DATA.sox, aaii: remote.aaii || FALLBACK_DATA.aaii });
-      } catch (e) { renderAll(FALLBACK_DATA); }
+        renderAll({
+          ...FALLBACK_DATA,
+          ...remote,
+          spx: remote.spx || FALLBACK_DATA.spx,
+          hy_oas: remote.hy_oas || FALLBACK_DATA.hy_oas,
+          vix_term: remote.vix_term || FALLBACK_DATA.vix_term,
+          rates: remote.rates || FALLBACK_DATA.rates,
+          sox: remote.sox || FALLBACK_DATA.sox,
+          aaii: (remote.aaii && remote.aaii.bull) ? remote.aaii : FALLBACK_DATA.aaii
+        });
+      } catch (e) {
+        renderAll(FALLBACK_DATA);
+      } finally {
+        if (manual && btn) {
+          setTimeout(() => { btn.textContent = "刷新数据"; btn.disabled = false; }, 400);
+        }
+      }
     }
 
     window.addEventListener("resize", () => Object.values(charts).forEach(c => c.resize()));
