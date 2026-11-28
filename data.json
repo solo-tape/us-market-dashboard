@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-28 00:58 UTC",
+  "updated_at": "2026-11-28 01:03 UTC",
   "spx": {
     "dates": [
       "11/06",
@@ -246,5 +246,7 @@
     "lev_funds_net_pct": -11.21,
     "lev_funds_net_k": -235.0,
     "weeks": 52
-  }
+  },
+  "naaim": 51.2,
+  "naaim_date": "11/20"
 }
