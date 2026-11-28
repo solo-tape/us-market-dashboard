@@ -110,33 +110,90 @@ def fetch_s5fi():
     return None
 
 
-def fetch_aaii(limit=8):
+def _aaii_rows_from_xls():
+    """AAII 官方 XLS：日期为发布日（周四），对应调查周截至前一日（周三）。
+    返回 [(week_ending, bull, neutral, bear), ...]"""
     xls_url = "https://www.aaii.com/files/surveys/sentiment.xls"
+    r = requests.get(xls_url, headers=HEADERS, timeout=15)
+    r.raise_for_status()
+    df = pd.read_excel(io.BytesIO(r.content), skiprows=3)
+    df = df.iloc[:, :4].copy()
+    df.columns = ["date", "bull", "neutral", "bear"]
+
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    for col in ["bull", "neutral", "bear"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df = df.dropna(subset=["date", "bull", "neutral", "bear"])
+    df = df.sort_values("date")
+
+    rows = []
+    if not df.empty:
+        scale = 100.0 if df["bull"].max() <= 1.0 else 1.0
+        for _, row in df.iterrows():
+            week_ending = row["date"] - pd.Timedelta(days=1)
+            rows.append((
+                week_ending,
+                round(float(row["bull"]) * scale, 1),
+                round(float(row["neutral"]) * scale, 1),
+                round(float(row["bear"]) * scale, 1),
+            ))
+    return rows
+
+
+def _aaii_rows_from_web():
+    """AAII 官网 sentimentsurvey 页的 Recent weekly results 表通常比 XLS 早更新一周，
+    用它补 XLS 尚未收录的最新周。表格列序为 Bullish / Neutral / Bearish。"""
+    url = "https://www.aaii.com/sentimentsurvey"
+    r = requests.get(url, headers=HEADERS, timeout=15)
+    r.raise_for_status()
+    text = BeautifulSoup(r.text, "html.parser").get_text(" ")
+    rows = []
+    seen = set()
+    for m in re.finditer(
+        r"(\d{1,2})/(\d{1,2})/(\d{4})\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%",
+        text,
+    ):
+        month, day, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        try:
+            week_ending = pd.Timestamp(year=year, month=month, day=day)
+        except ValueError:
+            continue
+        if week_ending in seen:
+            continue
+        seen.add(week_ending)
+        rows.append((
+            week_ending,
+            round(float(m.group(4)), 1),
+            round(float(m.group(5)), 1),
+            round(float(m.group(6)), 1),
+        ))
+    return rows
+
+
+def fetch_aaii(limit=8):
+    merged = {}
     try:
-        r = requests.get(xls_url, headers=HEADERS, timeout=15)
-        r.raise_for_status()
-        df = pd.read_excel(io.BytesIO(r.content), skiprows=3)
-        df = df.iloc[:, :4].copy()
-        df.columns = ["date", "bull", "neutral", "bear"]
-
-        df["date"] = pd.to_datetime(df["date"], errors="coerce")
-        for col in ["bull", "neutral", "bear"]:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-
-        df = df.dropna(subset=["date", "bull", "neutral", "bear"])
-        df = df.sort_values("date").tail(limit)
-
-        if not df.empty:
-            scale = 100.0 if df["bull"].max() <= 1.0 else 1.0
-            return {
-                "dates": df["date"].dt.strftime("%m/%d").tolist(),
-                "bull": [round(float(x) * scale, 1) for x in df["bull"].tolist()],
-                "bear": [round(float(x) * scale, 1) for x in df["bear"].tolist()],
-                "neutral": [round(float(x) * scale, 1) for x in df["neutral"].tolist()],
-            }
+        for row in _aaii_rows_from_xls():
+            merged[row[0]] = row
     except Exception as e:
-        print(f"AAII fetch failed: {e}")
-    return None
+        print(f"AAII XLS fetch failed: {e}")
+    try:
+        for row in _aaii_rows_from_web():
+            merged[row[0]] = row
+    except Exception as e:
+        print(f"AAII web fetch failed: {e}")
+
+    if not merged:
+        return None
+    rows = [merged[k] for k in sorted(merged)][-limit:]
+    return {
+        # 展示日期沿用 XLS 口径：发布日 = 调查周截止日 + 1 天
+        "dates": [(r[0] + pd.Timedelta(days=1)).strftime("%m/%d") for r in rows],
+        "bull": [r[1] for r in rows],
+        "neutral": [r[2] for r in rows],
+        "bear": [r[3] for r in rows],
+    }
 
 
 def fetch_naaim():
