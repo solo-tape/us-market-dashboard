@@ -262,7 +262,7 @@
           </div>
         </div>
 
-        <!-- 左下：2Y vs 10Y 美债 -->
+        <!-- 左下：2Y vs 10Y 美债 + Polymarket 议息概率 -->
         <div class="card p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between">
@@ -283,10 +283,10 @@
               <div id="tips-10y" class="text-xs sm:text-sm font-mono font-semibold text-sky-300 mt-0.5">--</div>
               <div class="text-[10px] text-slate-400">成长股估值锚</div>
             </div>
-            <div class="sub-card p-2.5">
-              <div class="text-[11px] text-slate-400">政策利率 (EFFR)</div>
-              <div id="fed-effr-val" class="text-xs sm:text-sm font-mono font-semibold text-amber-300 mt-0.5">--</div>
-              <div id="fed-implied-desc" class="text-[10px] text-slate-400">市场隐含路径</div>
+            <div id="fed-card" class="sub-card p-2.5">
+              <div id="fed-card-label" class="text-[11px] text-slate-400">Polymarket 议息</div>
+              <div id="fed-card-val" class="text-xs sm:text-sm font-mono font-bold text-amber-300 mt-0.5">--</div>
+              <div id="fed-card-sub" class="text-[10px] text-slate-400 truncate">等待抓取</div>
             </div>
           </div>
         </div>
@@ -411,13 +411,11 @@
       cnnBadge.className = "text-xs font-mono font-semibold " + (cnn <= 25 || cnn >= 75 ? "text-rose-400" : cnn <= 45 ? "text-amber-300" : "text-emerald-400");
 
       // === 四维加权打分引擎 ===
-      // 1) 逆向情绪与仓位 (35%)
       const sCnn = cnn <= 25 ? 90 : cnn <= 45 ? 72 : cnn <= 55 ? 50 : cnn <= 75 ? 32 : 12;
       const sAaii = aaiiBear >= 45 ? 85 : aaiiBear >= 35 ? 65 : aaiiBear >= 25 ? 45 : 25;
       const sNaaim = naaim <= 45 ? 85 : naaim <= 65 ? 70 : naaim <= 85 ? 45 : 20;
       const scoreSentiment = Math.round(sCnn * 0.5 + sAaii * 0.25 + sNaaim * 0.25);
 
-      // 2) 趋势与市场广度 (25%)
       let scoreTrend = 55;
       if (spx < ma50 && s5fi >= 45) scoreTrend = 72;
       else if (spx > ma50 && spx > ma200 && s5fi <= 80) scoreTrend = 68;
@@ -425,10 +423,8 @@
       else if (spx < ma200 && s5fi < 30) scoreTrend = 40;
       if (soxRatio >= sox50ma) scoreTrend = Math.min(100, scoreTrend + 6);
 
-      // 3) 波动率结构 (20%)
       const scoreVix = vixRatio > 1.08 ? 45 : vixRatio > 1.0 ? 68 : vixRatio >= 0.92 ? 65 : 55;
 
-      // 4) 信用与宏观利率 (20%)
       let scoreCredit = hy < 3.5 ? 90 : hy < 4.0 ? 80 : hy < 4.5 ? 60 : hy < 5.0 ? 35 : 0;
       if (tips10 > 2.5) scoreCredit = Math.max(0, scoreCredit - 6);
 
@@ -439,7 +435,6 @@
       const totalScore = Math.round(wSentiment + wTrend + wVix + wCredit);
       const isVeto = hy >= 5.0;
 
-      // 更新四维子板块明细
       document.getElementById("dim-trend-raw").textContent = `${scoreTrend} 分`;
       document.getElementById("dim-trend-bar").style.width = `${scoreTrend}%`;
       document.getElementById("dim-trend-weighted").textContent = `实得 ${wTrend.toFixed(1)} 分`;
@@ -460,7 +455,6 @@
       vetoSmall.textContent = isVeto ? `✕ 触发红线 (${hy.toFixed(2)}% ≥ 5.0%)` : `✓ 信用未否决 (${hy.toFixed(2)}% < 5.0%)`;
       vetoSmall.className = "font-medium " + (isVeto ? "text-rose-400" : "text-emerald-400");
 
-      // 更新底部通栏加权公式
       document.getElementById("sum-sentiment").textContent = wSentiment.toFixed(1);
       document.getElementById("sum-trend").textContent = wTrend.toFixed(1);
       document.getElementById("sum-vix").textContent = wVix.toFixed(1);
@@ -474,7 +468,7 @@
       sumVeto.textContent = isVeto ? `✕ 信用红线否决（HY OAS ${hy.toFixed(2)}% ≥ 5.0%）` : `✓ 信用未否决（HY OAS ${hy.toFixed(2)}% < 5.0%）`;
       sumVeto.className = "text-xs sm:text-sm font-medium " + (isVeto ? "text-rose-400" : "text-emerald-400");
 
-      // === 卡片 03：纯文字综合得分（无绿色遮挡框） ===
+      // === 卡片 03：纯文字综合得分（无绿色底框） ===
       if (isVeto) {
         setCardStyle("card-03", "rose", `综合得分 ${totalScore} 分（否决）`, "防御减仓 · 现金为王",
           `高收益债利差已升至 ${hy.toFixed(2)}%（突破 5.0% 熊市红线），触发一票否决机制。无视短线超卖信号，优先压缩风险敞口、保留现金。`, true);
@@ -528,16 +522,32 @@
         if (d.rates.tips10 != null) document.getElementById("tips-10y").textContent = d.rates.tips10.toFixed(2) + "%";
       }
 
-      // 真实联邦基金利率与市场隐含路径
-      if (d.fed_policy) {
+      // Polymarket 美联储议息实时概率（失败自动回退到 FRED 政策利率）
+      const fedCard = document.getElementById("fed-card");
+      const fedLabel = document.getElementById("fed-card-label");
+      const fedVal = document.getElementById("fed-card-val");
+      const fedSub = document.getElementById("fed-card-sub");
+      if (d.polymarket_fed) {
+        const pf = d.polymarket_fed;
+        const isHike = pf.direction === "hike";
+        const isCut = pf.direction === "cut";
+        fedCard.className = "sub-card p-2.5 " + (isHike ? "border-rose-500/40 bg-rose-950/20" : isCut ? "border-emerald-500/40 bg-emerald-950/20" : "");
+        fedLabel.className = "text-[11px] " + (isHike ? "text-rose-300" : isCut ? "text-emerald-300" : "text-slate-400");
+        fedLabel.textContent = `Polymarket (${pf.meeting})`;
+        fedVal.className = "text-xs sm:text-sm font-mono font-bold mt-0.5 " + (isHike ? "text-rose-400" : isCut ? "text-emerald-400" : "text-sky-300");
+        fedVal.textContent = `${pf.action} · ${pf.prob}%`;
+        fedSub.className = "text-[10px] truncate " + (isHike ? "text-rose-300/80" : "text-slate-400");
+        fedSub.textContent = pf.runner_up || (d.fed_policy ? `当前 EFFR ${d.fed_policy.effr.toFixed(2)}%` : "实时盘口概率");
+      } else if (d.fed_policy) {
         const fp = d.fed_policy;
-        document.getElementById("fed-effr-val").textContent = fp.effr.toFixed(2) + "%";
+        fedCard.className = "sub-card p-2.5";
+        fedLabel.className = "text-[11px] text-slate-400";
+        fedLabel.textContent = "政策利率 (EFFR)";
+        fedVal.className = "text-xs sm:text-sm font-mono font-semibold text-amber-300 mt-0.5";
+        fedVal.textContent = fp.effr.toFixed(2) + "%";
         const sign = fp.diff_bps > 0 ? "+" : "";
-        const dirText = fp.diff_bps >= 15 ? "定价偏紧" : fp.diff_bps <= -15 ? "定价降息" : "定价维稳";
-        document.getElementById("fed-implied-desc").textContent = `${fp.source} ${sign}${fp.diff_bps}bp (${dirText})`;
-      } else {
-        document.getElementById("fed-effr-val").textContent = "待更新";
-        document.getElementById("fed-implied-desc").textContent = "等待下一次抓取";
+        fedSub.className = "text-[10px] text-slate-400 truncate";
+        fedSub.textContent = `${fp.source} ${sign}${fp.diff_bps}bp`;
       }
 
       if (d.sox) {
