@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-28 01:05 UTC",
+  "updated_at": "2026-11-28 03:21 UTC",
   "spx": {
     "dates": [
       "11/06",
@@ -228,13 +228,13 @@
     "source": "ZQ期货",
     "diff_bps": 26
   },
-  "put_call": 0.67,
+  "put_call": 0.65,
   "polymarket_fed": {
     "meeting": "12月议息",
     "action": "加息25bp",
     "direction": "hike",
     "prob": 94.5,
-    "runner_up": "次选 按兵不动 4.2%",
+    "runner_up": "次选 按兵不动 3.7%",
     "event_title": "Fed Decision in December?"
   },
   "cftc_spx": {
