@@ -152,8 +152,7 @@ def fetch_naaim():
         except ValueError:
             pass
 
-        soup = BeautifulSoup(r.text, "lxml")
-        text = soup.get_text(" ", strip=True)
+        text = BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
         for pat in [
             r"NAAIM\s+Exposure\s+Index[^0-9]{0,40}(\d{1,3}\.\d{1,2})",
             r"Current\s+Value[^0-9]{0,20}(\d{1,3}\.\d{1,2})",
@@ -199,8 +198,183 @@ def fetch_put_call():
     return None
 
 
+def fetch_polymarket_fed():
+    """从 Polymarket Gamma API 自动抓取下一次未结算 FOMC 会议的加/降息市场概率"""
+    candidates = []
+    # 1) 全文搜索最新活跃的 Fed decision 事件
+    try:
+        r = requests.get(
+            "https://gamma-api.polymarket.com/public-search",
+            params={"q": "Fed decision in", "limit_per_type": 20},
+            headers=HEADERS,
+            timeout=15,
+        )
+        r.raise_for_status()
+        payload = r.json()
+        if isinstance(payload, dict) and isinstance(payload.get("events"), list):
+            candidates.extend(payload["events"])
+    except Exception as e:
+        print(f"Polymarket public-search failed: {e}")
+
+    # 2) 备用：按 24h 交易量拉取活跃事件筛选
+    if not candidates:
+        try:
+            r = requests.get(
+                "https://gamma-api.polymarket.com/events",
+                params={
+                    "active": "true",
+                    "closed": "false",
+                    "limit": 100,
+                    "order": "volume24hr",
+                    "ascending": "false",
+                },
+                headers=HEADERS,
+                timeout=15,
+            )
+            r.raise_for_status()
+            if isinstance(r.json(), list):
+                candidates.extend(r.json())
+        except Exception as e:
+            print(f"Polymarket events fallback failed: {e}")
+
+    now_utc = datetime.now(timezone.utc)
+    month_map = {
+        "january": "1月", "february": "2月", "march": "3月", "april": "4月",
+        "may": "5月", "june": "6月", "july": "7月", "august": "8月",
+        "september": "9月", "october": "10月", "november": "11月", "december": "12月",
+    }
+
+    valid_events = []
+    seen_slugs = set()
+    for ev in candidates:
+        slug = ev.get("slug") or ""
+        if slug in seen_slugs:
+            continue
+        seen_slugs.add(slug)
+
+        title = str(ev.get("title", ""))
+        if not re.search(r"fed\s+decision\s+in\s+[a-z]+", title, re.IGNORECASE):
+            continue
+        if ev.get("closed") is True or ev.get("active") is False:
+            continue
+
+        end_raw = ev.get("endDate") or ev.get("end_date_iso") or ""
+        try:
+            end_dt = datetime.fromisoformat(str(end_raw).replace("Z", "+00:00"))
+            if end_dt.tzinfo is None:
+                end_dt = end_dt.replace(tzinfo=timezone.utc)
+            if end_dt < now_utc:
+                continue
+        except Exception:
+            end_dt = datetime.max.replace(tzinfo=timezone.utc)
+
+        valid_events.append((end_dt, ev))
+
+    if not valid_events:
+        return None
+
+    # 锁定距离当前最近的一场未结算议息会议
+    valid_events.sort(key=lambda x: x[0])
+    _, target_ev = valid_events[0]
+
+    markets = target_ev.get("markets") or []
+    # 如果搜索结果未带完整盘口，用 slug 再补拉一次详情
+    if (not markets or "outcomePrices" not in markets[0]) and target_ev.get("slug"):
+        try:
+            r = requests.get(
+                "https://gamma-api.polymarket.com/events",
+                params={"slug": target_ev["slug"]},
+                headers=HEADERS,
+                timeout=15,
+            )
+            r.raise_for_status()
+            ev_list = r.json()
+            if isinstance(ev_list, list) and ev_list:
+                target_ev = ev_list[0]
+                markets = target_ev.get("markets") or []
+        except Exception as e:
+            print(f"Polymarket slug detail fetch failed: {e}")
+
+    title = str(target_ev.get("title", ""))
+    m_month = re.search(r"in\s+([a-z]+)", title, re.IGNORECASE)
+    meeting_cn = month_map.get(m_month.group(1).lower(), m_month.group(1)) if m_month else "下次"
+    meeting_label = f"{meeting_cn}议息"
+
+    parsed_outcomes = []
+    for mkt in markets:
+        if mkt.get("closed") is True:
+            continue
+        raw_label = str(mkt.get("groupItemTitle") or mkt.get("question") or "").strip()
+        if not raw_label:
+            continue
+
+        # 优先取有效盘口中间价，否则解析 outcomePrices[0]
+        prob = None
+        try:
+            bid = float(mkt.get("bestBid")) if mkt.get("bestBid") is not None else None
+            ask = float(mkt.get("bestAsk")) if mkt.get("bestAsk") is not None else None
+            if bid is not None and ask is not None and 0.0 <= bid <= ask <= 1.0 and (ask - bid) <= 0.12:
+                prob = (bid + ask) / 2.0
+        except (TypeError, ValueError):
+            pass
+
+        if prob is None:
+            prices = mkt.get("outcomePrices")
+            if isinstance(prices, str):
+                try:
+                    prices = json.loads(prices)
+                except Exception:
+                    prices = []
+            if isinstance(prices, list) and len(prices) > 0:
+                try:
+                    prob = float(prices[0])
+                except (TypeError, ValueError):
+                    prob = None
+
+        if prob is None:
+            continue
+
+        low = raw_label.lower()
+        if "no change" in low or "hold" in low or "unchanged" in low:
+            cn_action = "按兵不动"
+            direction = "hold"
+        elif "increase" in low or "hike" in low:
+            bp = re.search(r"(\d+\+?)\s*bps?", low)
+            cn_action = f"加息{bp.group(1)}bp" if bp else "加息"
+            direction = "hike"
+        elif "decrease" in low or "cut" in low:
+            bp = re.search(r"(\d+\+?)\s*bps?", low)
+            cn_action = f"降息{bp.group(1)}bp" if bp else "降息"
+            direction = "cut"
+        else:
+            cn_action = raw_label[:14]
+            direction = "other"
+
+        parsed_outcomes.append({
+            "action": cn_action,
+            "direction": direction,
+            "prob": round(prob * 100.0, 1),
+        })
+
+    if not parsed_outcomes:
+        return None
+
+    parsed_outcomes.sort(key=lambda x: x["prob"], reverse=True)
+    top = parsed_outcomes[0]
+    runner = parsed_outcomes[1] if len(parsed_outcomes) > 1 else None
+
+    return {
+        "meeting": meeting_label,
+        "action": top["action"],
+        "direction": top["direction"],
+        "prob": top["prob"],
+        "runner_up": f"次选 {runner['action']} {runner['prob']}%" if runner and runner["prob"] >= 0.5 else "",
+        "event_title": title,
+    }
+
+
 def fetch_zq_implied_rate():
-    """抓取 CBOT 30天联邦基金利率期货 (ZQ=F) 隐含利率"""
+    """抓取 CBOT 30天联邦基金利率期货 (ZQ=F) 隐含利率（作兜底参考）"""
     try:
         df = yf.Ticker("ZQ=F").history(period="5d")
         if not df.empty:
@@ -214,7 +388,6 @@ def fetch_zq_implied_rate():
 
 def main():
     data = load_existing()
-    # 清理旧的估算占位字段
     data.pop("cds", None)
     data.pop("fedwatch", None)
 
@@ -267,7 +440,7 @@ def main():
     if vix_vals:
         data["vix_term"] = vix_vals
 
-    # 4. FRED 高收益债利差（HY OAS）+ 真实分级信用利差（IG OAS / CCC OAS）
+    # 4. FRED 高收益债利差（HY OAS）+ 分级信用利差（IG OAS / CCC OAS）
     hy = fetch_fred_series("BAMLH0A0HYM2", limit=15)
     if hy:
         data["hy_oas"] = {
@@ -286,7 +459,7 @@ def main():
             credit_detail["ccc_oas_bps"] = int(round(ccc[-1][1] * 100))
         data["credit_detail"] = credit_detail
 
-    # 5. FRED 美债利率 + 真实政策利率路径（EFFR vs 联邦基金期货/2Y）
+    # 5. FRED 美债利率 + 真实基准利率 (EFFR)
     y10 = fetch_fred_series("DGS10", limit=15)
     y2 = fetch_fred_series("DGS2", limit=15)
     tips10 = fetch_fred_series("DFII10", limit=5)
@@ -312,7 +485,13 @@ def main():
                 "diff_bps": diff_bps,
             }
 
-    # 6. 情绪与广度指标
+    # 6. Polymarket 美联储议息概率（自动匹配下一场 FOMC）
+    poly_fed = fetch_polymarket_fed()
+    if poly_fed is not None:
+        data["polymarket_fed"] = poly_fed
+        print(f"Polymarket Fed: {poly_fed['meeting']} {poly_fed['action']} {poly_fed['prob']}%")
+
+    # 7. 情绪与广度指标
     cnn = fetch_cnn_fear_greed()
     if cnn is not None:
         data["cnn"] = cnn
