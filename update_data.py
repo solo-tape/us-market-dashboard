@@ -140,32 +140,33 @@ def fetch_aaii(limit=8):
 
 
 def fetch_naaim():
-    """抓取 SentimentInsideOut 公开的 NAAIM 最新周度读数，支持直连 + Jina Reader 双通道"""
-    target = "https://sentimentinsideout.com/en/sentiment-indicators/naaim-exposure-index/"
-    urls = [target, f"https://r.jina.ai/{target}"]
-    patterns = [
-        r"Latest\s+reading[\s\S]{0,80}?(-?\d{1,3}(?:\.\d{1,2})?)\D{1,25}(\d{4}-\d{2}-\d{2})",
-        r"(-?\d{1,3}(?:\.\d{1,2})?)\D{1,20}(\d{4}-\d{2}-\d{2})\D{1,15}NAAIM",
+    """换源抓取 NAAIM 机构仓位，走 Jina Reader 提取纯文本，匹配最新周度读数"""
+    candidates = [
+        "https://r.jina.ai/https://www.investing.com/economic-calendar/naaim-exposure-index-1906",
+        "https://r.jina.ai/https://en.macromicro.me/charts/41621/naaim-exposure-index",
+        "https://r.jina.ai/https://www.barchart.com/stocks/quotes/$NAAIM/overview",
     ]
-
-    for url in urls:
+    for url in candidates:
         try:
             r = requests.get(url, headers=HEADERS, timeout=20)
-            r.raise_for_status()
-            text = r.text if "r.jina.ai" in url else BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
-            for pat in patterns:
+            if r.status_code != 200 or not r.text:
+                continue
+            text = r.text
+            # 匹配 NAAIM 仓位常见数值区间（-100 到 200 之间的小数）
+            for pat in [
+                r"NAAIM\s+Exposure\s+Index[\s\S]{0,120}?(-?\d{1,3}\.\d{1,2})",
+                r"Latest[\s\S]{0,60}?(-?\d{1,3}\.\d{1,2})\s*%?",
+            ]:
                 m = re.search(pat, text, re.IGNORECASE)
                 if m:
                     val = round(float(m.group(1)), 2)
-                    dt_str = m.group(2)[5:].replace("-", "/")
-                    if -200 <= val <= 200:
-                        print(f"NAAIM fetched ({url}): {val} ({dt_str})")
-                        return val, dt_str
+                    if -100 <= val <= 200 and val != 1906.0:
+                        print(f"NAAIM fetched from {url}: {val}")
+                        return val, None
         except Exception as e:
-            print(f"NAAIM fetch failed ({url}): {e}")
-
+            print(f"NAAIM source failed ({url}): {e}")
     return None, None
-
+    
 def fetch_cftc_spx():
     """直连 CFTC 官方免费 TFF API，获取标普 500 E-mini (13874A) 近 52 周机构持仓（仅作参考，不计分）"""
     url = "https://publicreporting.cftc.gov/resource/gpe5-46if.json"
