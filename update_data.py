@@ -139,65 +139,52 @@ def fetch_aaii(limit=8):
     return None
 
 
-def _extract_latest_naaim_from_df(df):
-    """从表格中自动按日期列 + 数值列提取最新一期 NAAIM 指数"""
-    if df is None or df.shape[1] < 2:
-        return None
-    sub = df.iloc[:, :2].copy()
-    sub.columns = ["date", "val"]
-    sub["date"] = pd.to_datetime(sub["date"], errors="coerce")
-    sub["val"] = pd.to_numeric(sub["val"], errors="coerce")
-    sub = sub.dropna(subset=["date", "val"])
-    sub = sub[(sub["val"] >= -200) & (sub["val"] <= 200)]
-    if not sub.empty:
-        sub = sub.sort_values("date")
-        return round(float(sub["val"].iloc[-1]), 2)
-    return None
-
-
 def fetch_naaim():
-    """优先拉取 NAAIM 官方页面挂出的 Excel 文件，其次按日期列解析 HTML 表格与文本"""
-    url = "https://www.naaim.org/programs/naaim-exposure-index/"
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
-
-        # 1) 优先抓取页面里的官方 Excel 下载链接 (.xlsx / .xls)
-        for a in soup.find_all("a", href=True):
-            href = a["href"].strip()
-            if re.search(r"\.xlsx?(\?|$)", href, re.IGNORECASE):
-                full_url = urljoin(url, href)
-                try:
-                    xr = requests.get(full_url, headers=HEADERS, timeout=15)
-                    xr.raise_for_status()
-                    xdf = pd.read_excel(io.BytesIO(xr.content))
-                    val = _extract_latest_naaim_from_df(xdf)
-                    if val is not None:
-                        print(f"NAAIM from Excel ({full_url}): {val}")
-                        return val
-                except Exception as xe:
-                    print(f"NAAIM Excel parse failed ({full_url}): {xe}")
-
-        # 2) 解析网页 HTML 表格（不依赖表头名，按日期列识别）
+    """抓取第三方公开同步的 NAAIM 最新周度读数与日期，返回 (value, date_str)"""
+    urls = [
+        "https://sentimentinsideout.com/en/sentiment-indicators/naaim-exposure-index/",
+        "https://sentimentinsideout.com/zh-cn/sentiment-indicators/naaim-exposure-index/",
+    ]
+    for url in urls:
         try:
-            tables = pd.read_html(io.StringIO(r.text))
-            for tbl in tables:
-                val = _extract_latest_naaim_from_df(tbl)
-                if val is not None:
-                    print(f"NAAIM from HTML table: {val}")
-                    return val
-        except ValueError:
-            pass
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            r.raise_for_status()
+            text = BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
 
-        # 3) 正则兜底：匹配页面中最新的 "MM/DD/YYYY 数值"
-        text = soup.get_text(" ", strip=True)
+            # 优先匹配 "Latest reading 51.2 2026-11-20" 或 "最新读数 51.2 2026-11-20"
+            for pat in [
+                r"(?:Latest\s+reading|最新读数|最新讀數)[^0-9\-]{0,30}(-?\d{1,3}(?:\.\d{1,2})?)\s+(\d{4}-\d{2}-\d{2})",
+                r"(-?\d{1,3}\.\d{1,2})\s+(\d{4}-\d{2}-\d{2})\s*[·•|]\s*NAAIM",
+            ]:
+                m = re.search(pat, text, re.IGNORECASE)
+                if m:
+                    val = round(float(m.group(1)), 2)
+                    dt_str = m.group(2)[5:].replace("-", "/")
+                    if -200 <= val <= 200:
+                        print(f"NAAIM from SentimentInsideOut: {val} ({dt_str})")
+                        return val, dt_str
+
+            # 次选：仅匹配数值
+            m2 = re.search(r"(?:Latest\s+reading|最新读数)[^0-9\-]{0,30}(-?\d{1,3}(?:\.\d{1,2})?)", text, re.IGNORECASE)
+            if m2:
+                val = round(float(m2.group(1)), 2)
+                if -200 <= val <= 200:
+                    print(f"NAAIM from SentimentInsideOut (no date): {val}")
+                    return val, None
+        except Exception as e:
+            print(f"NAAIM mirror ({url}) failed: {e}")
+
+    # 兜底尝试官方页面
+    try:
+        r = requests.get("https://www.naaim.org/programs/naaim-exposure-index/", headers=HEADERS, timeout=15)
+        r.raise_for_status()
+        text = BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
         matches = re.findall(r"(\d{2}/\d{2}/\d{4})\s+(-?\d{1,3}\.\d{1,2})", text)
         parsed = []
-        for dt_str, val_str in matches:
+        for dt_s, val_s in matches:
             try:
-                dt = datetime.strptime(dt_str, "%m/%d/%Y")
-                v = float(val_str)
+                dt = datetime.strptime(dt_s, "%m/%d/%Y")
+                v = float(val_s)
                 if -200 <= v <= 200:
                     parsed.append((dt, v))
             except ValueError:
@@ -205,10 +192,86 @@ def fetch_naaim():
         if parsed:
             parsed.sort(key=lambda x: x[0])
             val = round(parsed[-1][1], 2)
-            print(f"NAAIM from regex: {val}")
-            return val
+            dt_str = parsed[-1][0].strftime("%m/%d")
+            print(f"NAAIM from naaim.org fallback: {val} ({dt_str})")
+            return val, dt_str
     except Exception as e:
-        print(f"NAAIM fetch failed: {e}")
+        print(f"NAAIM naaim.org fallback failed: {e}")
+
+    return None, None
+
+
+def fetch_cftc_spx():
+    """直连 CFTC 官方免费 TFF API，获取标普 500 E-mini (13874A) 近 52 周机构持仓（仅作参考，不计分）"""
+    url = "https://publicreporting.cftc.gov/resource/gpe5-46if.json"
+    params = {
+        "$where": "cftc_contract_market_code='13874A'",
+        "$order": "report_date_as_yyyy_mm_dd DESC",
+        "$limit": 52,
+    }
+    try:
+        r = requests.get(url, params=params, headers=HEADERS, timeout=15)
+        r.raise_for_status()
+        rows = r.json()
+        if not isinstance(rows, list) or not rows:
+            return None
+
+        parsed = []
+        for row in rows:
+            try:
+                oi = float(row.get("open_interest_all") or 0)
+                if oi <= 0:
+                    continue
+                am_long = float(row.get("asset_mgr_positions_long") or row.get("asset_mgr_positions_long_all") or 0)
+                am_short = float(row.get("asset_mgr_positions_short") or row.get("asset_mgr_positions_short_all") or 0)
+                lev_long = float(row.get("lev_money_positions_long") or row.get("lev_money_positions_long_all") or 0)
+                lev_short = float(row.get("lev_money_positions_short") or row.get("lev_money_positions_short_all") or 0)
+                dt_raw = str(row.get("report_date_as_yyyy_mm_dd") or "")[:10]
+                if len(dt_raw) < 10:
+                    continue
+
+                am_net = am_long - am_short
+                lev_net = lev_long - lev_short
+                parsed.append({
+                    "date": dt_raw[5:].replace("-", "/"),
+                    "am_net_k": round(am_net / 1000.0, 1),
+                    "am_net_pct": round((am_net / oi) * 100.0, 2),
+                    "lev_net_k": round(lev_net / 1000.0, 1),
+                    "lev_net_pct": round((lev_net / oi) * 100.0, 2),
+                })
+            except (TypeError, ValueError):
+                continue
+
+        if not parsed:
+            return None
+
+        latest = parsed[0]
+        prev = parsed[1] if len(parsed) > 1 else latest
+
+        # 计算资管机构净多头占比的近 1 年（52周）历史分位数 (0-100%)
+        series = [p["am_net_pct"] for p in parsed]
+        below = sum(1 for x in series if x < latest["am_net_pct"])
+        equal = sum(1 for x in series if x == latest["am_net_pct"])
+        pct_rank_1y = round(((below + 0.5 * equal) / len(series)) * 100.0, 1)
+
+        wow_change = round(latest["am_net_pct"] - prev["am_net_pct"], 2)
+        result = {
+            "report_date": latest["date"],
+            "asset_mgr_net_pct": latest["am_net_pct"],
+            "asset_mgr_net_k": latest["am_net_k"],
+            "asset_mgr_pct_rank_1y": pct_rank_1y,
+            "asset_mgr_wow_pct": wow_change,
+            "lev_funds_net_pct": latest["lev_net_pct"],
+            "lev_funds_net_k": latest["lev_net_k"],
+            "weeks": len(parsed),
+        }
+        print(
+            f"CFTC SPX ({latest['date']}): AssetMgr {latest['am_net_pct']}% "
+            f"(1Y rank {pct_rank_1y}%), LevFunds {latest['lev_net_pct']}%"
+        )
+        return result
+    except Exception as e:
+        print(f"CFTC SPX fetch failed: {e}")
     return None
 
 
@@ -244,7 +307,6 @@ def fetch_put_call():
         print(f"CBOE Equity Put/Call ({len(vals)}D avg): {avg_val}")
         return avg_val
 
-    # 备用：YCharts（兼容带逗号与不带逗号的日期格式）
     try:
         r = requests.get("https://ycharts.com/indicators/cboe_equity_put_call_ratio", headers=HEADERS, timeout=15)
         r.raise_for_status()
@@ -464,7 +526,7 @@ def main():
             "latest": round(float(latest["Close"]), 2),
         }
 
-    # 2. 费城半导体 SOX 及真实 SOX/SPX 50 日均值（按完整年月日对齐）
+    # 2. 费城半导体 SOX 及真实 SOX/SPX 50 日均值
     sox = fetch_yf_raw("^SOX", period="1y")
     if not sox.empty and not spx.empty:
         aligned = pd.concat(
@@ -561,13 +623,20 @@ def main():
     if aaii is not None:
         data["aaii"] = aaii
 
-    naaim = fetch_naaim()
-    if naaim is not None:
-        data["naaim"] = naaim
+    naaim_val, naaim_date = fetch_naaim()
+    if naaim_val is not None:
+        data["naaim"] = naaim_val
+        if naaim_date:
+            data["naaim_date"] = naaim_date
 
     put_call = fetch_put_call()
     if put_call is not None:
         data["put_call"] = put_call
+
+    # 8. CFTC 标普 500 期货机构持仓（仅参考展示，不参与打分）
+    cftc_spx = fetch_cftc_spx()
+    if cftc_spx is not None:
+        data["cftc_spx"] = cftc_spx
 
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
