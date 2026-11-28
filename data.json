@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-28 01:03 UTC",
+  "updated_at": "2026-11-28 01:05 UTC",
   "spx": {
     "dates": [
       "11/06",
@@ -234,7 +234,7 @@
     "action": "加息25bp",
     "direction": "hike",
     "prob": 94.5,
-    "runner_up": "次选 按兵不动 4.0%",
+    "runner_up": "次选 按兵不动 4.2%",
     "event_title": "Fed Decision in December?"
   },
   "cftc_spx": {
