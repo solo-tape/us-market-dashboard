@@ -140,66 +140,31 @@ def fetch_aaii(limit=8):
 
 
 def fetch_naaim():
-    """抓取第三方公开同步的 NAAIM 最新周度读数与日期，返回 (value, date_str)"""
-    urls = [
-        "https://sentimentinsideout.com/en/sentiment-indicators/naaim-exposure-index/",
-        "https://sentimentinsideout.com/zh-cn/sentiment-indicators/naaim-exposure-index/",
+    """抓取 SentimentInsideOut 公开的 NAAIM 最新周度读数，支持直连 + Jina Reader 双通道"""
+    target = "https://sentimentinsideout.com/en/sentiment-indicators/naaim-exposure-index/"
+    urls = [target, f"https://r.jina.ai/{target}"]
+    patterns = [
+        r"Latest\s+reading[\s\S]{0,80}?(-?\d{1,3}(?:\.\d{1,2})?)\D{1,25}(\d{4}-\d{2}-\d{2})",
+        r"(-?\d{1,3}(?:\.\d{1,2})?)\D{1,20}(\d{4}-\d{2}-\d{2})\D{1,15}NAAIM",
     ]
+
     for url in urls:
         try:
-            r = requests.get(url, headers=HEADERS, timeout=15)
+            r = requests.get(url, headers=HEADERS, timeout=20)
             r.raise_for_status()
-            text = BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
-
-            # 优先匹配 "Latest reading 51.2 2026-11-20" 或 "最新读数 51.2 2026-11-20"
-            for pat in [
-                r"(?:Latest\s+reading|最新读数|最新讀數)[^0-9\-]{0,30}(-?\d{1,3}(?:\.\d{1,2})?)\s+(\d{4}-\d{2}-\d{2})",
-                r"(-?\d{1,3}\.\d{1,2})\s+(\d{4}-\d{2}-\d{2})\s*[·•|]\s*NAAIM",
-            ]:
+            text = r.text if "r.jina.ai" in url else BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
+            for pat in patterns:
                 m = re.search(pat, text, re.IGNORECASE)
                 if m:
                     val = round(float(m.group(1)), 2)
                     dt_str = m.group(2)[5:].replace("-", "/")
                     if -200 <= val <= 200:
-                        print(f"NAAIM from SentimentInsideOut: {val} ({dt_str})")
+                        print(f"NAAIM fetched ({url}): {val} ({dt_str})")
                         return val, dt_str
-
-            # 次选：仅匹配数值
-            m2 = re.search(r"(?:Latest\s+reading|最新读数)[^0-9\-]{0,30}(-?\d{1,3}(?:\.\d{1,2})?)", text, re.IGNORECASE)
-            if m2:
-                val = round(float(m2.group(1)), 2)
-                if -200 <= val <= 200:
-                    print(f"NAAIM from SentimentInsideOut (no date): {val}")
-                    return val, None
         except Exception as e:
-            print(f"NAAIM mirror ({url}) failed: {e}")
-
-    # 兜底尝试官方页面
-    try:
-        r = requests.get("https://www.naaim.org/programs/naaim-exposure-index/", headers=HEADERS, timeout=15)
-        r.raise_for_status()
-        text = BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
-        matches = re.findall(r"(\d{2}/\d{2}/\d{4})\s+(-?\d{1,3}\.\d{1,2})", text)
-        parsed = []
-        for dt_s, val_s in matches:
-            try:
-                dt = datetime.strptime(dt_s, "%m/%d/%Y")
-                v = float(val_s)
-                if -200 <= v <= 200:
-                    parsed.append((dt, v))
-            except ValueError:
-                continue
-        if parsed:
-            parsed.sort(key=lambda x: x[0])
-            val = round(parsed[-1][1], 2)
-            dt_str = parsed[-1][0].strftime("%m/%d")
-            print(f"NAAIM from naaim.org fallback: {val} ({dt_str})")
-            return val, dt_str
-    except Exception as e:
-        print(f"NAAIM naaim.org fallback failed: {e}")
+            print(f"NAAIM fetch failed ({url}): {e}")
 
     return None, None
-
 
 def fetch_cftc_spx():
     """直连 CFTC 官方免费 TFF API，获取标普 500 E-mini (13874A) 近 52 周机构持仓（仅作参考，不计分）"""
