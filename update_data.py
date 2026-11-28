@@ -141,61 +141,87 @@ def fetch_naaim():
     try:
         r = requests.get(url, headers=HEADERS, timeout=15)
         r.raise_for_status()
-        tables = pd.read_html(io.StringIO(r.text))
-        for tbl in tables:
-            for col in tbl.columns:
-                if "naaim" in str(col).lower() or "number" in str(col).lower():
-                    val = pd.to_numeric(tbl[col], errors="coerce").dropna()
-                    if not val.empty:
-                        return round(float(val.iloc[0]), 2)
+        try:
+            tables = pd.read_html(io.StringIO(r.text))
+            for tbl in tables:
+                for col in tbl.columns:
+                    if "naaim" in str(col).lower() or "number" in str(col).lower():
+                        val = pd.to_numeric(tbl[col], errors="coerce").dropna()
+                        if not val.empty:
+                            return round(float(val.iloc[0]), 2)
+        except ValueError:
+            pass
+
+        soup = BeautifulSoup(r.text, "lxml")
+        text = soup.get_text(" ", strip=True)
+        for pat in [
+            r"NAAIM\s+Exposure\s+Index[^0-9]{0,40}(\d{1,3}\.\d{1,2})",
+            r"Current\s+Value[^0-9]{0,20}(\d{1,3}\.\d{1,2})",
+        ]:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                return round(float(m.group(1)), 2)
     except Exception as e:
         print(f"NAAIM fetch failed: {e}")
     return None
 
 
 def fetch_put_call():
-    url = "https://ycharts.com/indicators/cboe_equity_put_call_ratio"
+    """优先拉取 CBOE 公开 Equity Put/Call CSV，失败再尝试 YCharts"""
+    cboe_urls = [
+        "https://cdn.cboe.com/resources/options/volume_and_call_put_ratios/equitypc.csv",
+        "https://cdn.cboe.com/resources/options/volume_and_call_put_ratios/totalpc.csv",
+    ]
+    for url in cboe_urls:
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            r.raise_for_status()
+            df = pd.read_csv(io.StringIO(r.text), skiprows=2)
+            ratio_cols = [c for c in df.columns if "p/c" in str(c).lower() or "ratio" in str(c).lower()]
+            if ratio_cols:
+                vals = pd.to_numeric(df[ratio_cols[-1]], errors="coerce").dropna()
+                if len(vals) >= 10:
+                    return round(float(vals.tail(10).mean()), 2)
+                if not vals.empty:
+                    return round(float(vals.iloc[-1]), 2)
+        except Exception as e:
+            print(f"CBOE CSV ({url}) failed: {e}")
+
     try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
+        r = requests.get("https://ycharts.com/indicators/cboe_equity_put_call_ratio", headers=HEADERS, timeout=15)
         r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
-        text = soup.get_text(" ", strip=True)
+        text = BeautifulSoup(r.text, "lxml").get_text(" ", strip=True)
         m = re.search(r"(\d\.\d{2})\s+for\s+[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}", text)
         if m:
             return round(float(m.group(1)), 2)
     except Exception as e:
-        print(f"Put/Call failed: {e}")
+        print(f"YCharts Put/Call failed: {e}")
     return None
 
 
-def calculate_fedwatch(y2_val, y10_val):
-    """根据 2Y/10Y 美债收益率、大势环境，估测 FOMC 加/降息定价 (动态 Proxy，更抗反爬)"""
-    # 模拟下一场 FOMC 会议
-    now = datetime.now()
-    meeting_dates = [(12, "12/16")] if now.month <= 12 else [(2, "02/03")]
-    month_val, label = meeting_dates[0]
-
-    # 简易降息概率推导：通常 2Y 越低于联邦基金利率(当前中枢约 4.8%)，且 DGS2 < DGS10（倒挂缓和），降息概率越高
-    base_prob = 92.5
-    if y2_val < 4.5:
-        base_prob += (4.5 - y2_val) * 12
-    else:
-        base_prob -= (y2_val - 4.5) * 8
-
-    final_prob = min(99.8, max(50.1, base_prob))
-    return {
-        "meeting_date": label,
-        "action": "降息25bp" if y2_val < 4.85 else "保持利率不变",
-        "probability": round(final_prob, 1),
-    }
+def fetch_zq_implied_rate():
+    """抓取 CBOT 30天联邦基金利率期货 (ZQ=F) 隐含利率"""
+    try:
+        df = yf.Ticker("ZQ=F").history(period="5d")
+        if not df.empty:
+            px = float(df["Close"].iloc[-1])
+            if 85.0 < px < 100.0:
+                return round(100.0 - px, 2)
+    except Exception as e:
+        print(f"ZQ=F fetch failed: {e}")
+    return None
 
 
 def main():
     data = load_existing()
+    # 清理旧的估算占位字段
+    data.pop("cds", None)
+    data.pop("fedwatch", None)
+
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     data["updated_at"] = now_str
 
-    # 1. 标普 500
+    # 1. 标普 500 及 50/200 日均线
     spx = fetch_yf_history("^GSPC", period="1y")
     if not spx.empty:
         spx["MA50"] = spx["Close"].rolling(50).mean()
@@ -205,15 +231,14 @@ def main():
         data["spx"] = {
             "dates": recent.index.tolist(),
             "close": [round(x, 2) for x in recent["Close"].tolist()],
-            "ma50": round(float(latest["MA50"]), 2),
-            "ma200": round(float(latest["MA200"]), 2),
+            "ma50": round(float(latest["MA50"]), 2) if pd.notna(latest["MA50"]) else None,
+            "ma200": round(float(latest["MA200"]), 2) if pd.notna(latest["MA200"]) else None,
             "latest": round(float(latest["Close"]), 2),
         }
 
-    # 2. 费城半导体 SOX 及 SOX/SPX 比值（加算 50 日均值）
-    sox = fetch_yf_history("^SOX", period="1y")  # 提至 1y
+    # 2. 费城半导体 SOX 及真实 SOX/SPX 50 日均值
+    sox = fetch_yf_history("^SOX", period="1y")
     if not sox.empty and not spx.empty:
-        # 对齐索引计算 50 日 moving average
         sox_aligned = sox["Close"]
         spx_aligned = spx["Close"].reindex(sox_aligned.index).ffill()
         ratio_series = sox_aligned / spx_aligned
@@ -227,10 +252,10 @@ def main():
             "close": [round(x, 2) for x in recent_sox["Close"].tolist()],
             "latest": round(sox_latest, 2),
             "sox_spx_ratio": round(sox_latest / spx_latest, 3),
-            "sox_spx_50ma": round(float(ratio_50ma), 3),
+            "sox_spx_50ma": round(float(ratio_50ma), 3) if pd.notna(ratio_50ma) else None,
         }
 
-    # 3. VIX
+    # 3. CBOE VIX 期限结构
     vix_map = {"VIX1D": "^VIX1D", "VIX9D": "^VIX9D", "VIX": "^VIX", "VIX3M": "^VIX3M"}
     vix_vals = {}
     for label, sym in vix_map.items():
@@ -242,26 +267,30 @@ def main():
     if vix_vals:
         data["vix_term"] = vix_vals
 
-    # 4. FRED
+    # 4. FRED 高收益债利差（HY OAS）+ 真实分级信用利差（IG OAS / CCC OAS）
     hy = fetch_fred_series("BAMLH0A0HYM2", limit=15)
-    hy_latest = 3.77  # 兜底
     if hy:
-        hy_latest = round(hy[-1][1], 2)
         data["hy_oas"] = {
             "dates": [x[0] for x in hy],
             "values": [round(x[1], 2) for x in hy],
-            "latest": hy_latest,
+            "latest": round(hy[-1][1], 2),
         }
 
-    # 企业 5Y CDS：基于 OAS 走势模型拟合 Proxy (Oracle: ~hy*40 + 80, CoreWeave: ~hy*280 + 200)
-    data["cds"] = {
-        "orcl": int(hy_latest * 41 + 84),
-        "coreweave": int(hy_latest * 287 + 198),
-    }
+    ig = fetch_fred_series("BAMLC0A0CM", limit=5)
+    ccc = fetch_fred_series("BAMLH0A3HYC", limit=5)
+    if ig or ccc:
+        credit_detail = data.get("credit_detail", {})
+        if ig:
+            credit_detail["ig_oas_bps"] = int(round(ig[-1][1] * 100))
+        if ccc:
+            credit_detail["ccc_oas_bps"] = int(round(ccc[-1][1] * 100))
+        data["credit_detail"] = credit_detail
 
+    # 5. FRED 美债利率 + 真实政策利率路径（EFFR vs 联邦基金期货/2Y）
     y10 = fetch_fred_series("DGS10", limit=15)
     y2 = fetch_fred_series("DGS2", limit=15)
     tips10 = fetch_fred_series("DFII10", limit=5)
+    dff = fetch_fred_series("DFF", limit=5)
     if y10 and y2:
         y10_val, y2_val = y10[-1][1], y2[-1][1]
         data["rates"] = {
@@ -271,10 +300,19 @@ def main():
             "spread_2s10s": round(y10_val - y2_val, 2),
             "tips10": round(tips10[-1][1], 2) if tips10 else None,
         }
-        # CME FedWatch 概率自动演算
-        data["fedwatch"] = calculate_fedwatch(y2_val, y10_val)
+        if dff:
+            effr = round(dff[-1][1], 2)
+            zq_rate = fetch_zq_implied_rate()
+            market_rate = zq_rate if zq_rate is not None else round(y2_val, 2)
+            diff_bps = int(round((market_rate - effr) * 100))
+            data["fed_policy"] = {
+                "effr": effr,
+                "implied_rate": market_rate,
+                "source": "ZQ期货" if zq_rate is not None else "2Y美债",
+                "diff_bps": diff_bps,
+            }
 
-    # 5. 指标
+    # 6. 情绪与广度指标
     cnn = fetch_cnn_fear_greed()
     if cnn is not None:
         data["cnn"] = cnn
@@ -297,7 +335,7 @@ def main():
 
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    print(f"Successfully closed loop of 100% automate indicators.")
+    print(f"Updated {DATA_FILE} at {now_str}")
 
 
 if __name__ == "__main__":
