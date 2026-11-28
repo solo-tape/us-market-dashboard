@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-28 00:39 UTC",
+  "updated_at": "2026-11-28 00:53 UTC",
   "spx": {
     "dates": [
       "11/06",
@@ -234,7 +234,17 @@
     "action": "加息25bp",
     "direction": "hike",
     "prob": 94.5,
-    "runner_up": "次选 按兵不动 4.1%",
+    "runner_up": "次选 按兵不动 4.0%",
     "event_title": "Fed Decision in December?"
+  },
+  "cftc_spx": {
+    "report_date": "11/17",
+    "asset_mgr_net_pct": 42.68,
+    "asset_mgr_net_k": 895.0,
+    "asset_mgr_pct_rank_1y": 8.7,
+    "asset_mgr_wow_pct": -2.63,
+    "lev_funds_net_pct": -11.21,
+    "lev_funds_net_k": -235.0,
+    "weeks": 52
   }
 }
